@@ -93,13 +93,15 @@ function dnet(dist::Function, X::AbstractVector{T}, numcenters::Int; verbose=fal
 end
 
 """
-    kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Function=mean; initial=:fft, maxiters=0, tol=0.001) where T
-    kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, centroid::Function=mean; maxiters=0, tol=0.001) where T
+    kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Function=mean; initial=:fft, maxiters=0, tol=0.001, recall=1.0) where T
+    kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, centroid::Function=mean; maxiters=0, tol=0.001, recall=1.0) where T
 
 Performs a kcenters clustering of `X` using `dist` as distance function and `centroid` to compute centroid objects.
 It is based on the k-means algorithm yet using different algorithms as initial clusters.
+If recall is 1.0 then an exhaustive search is made to find associations of each item to its nearest cluster; if ``0 < recall < 0`` then an approximate index
+(`SearchGraph` from `SimilaritySearch.jl`) will be used for the same purpose; the `recall` controls the expected search quality (trade with search time).
 """
-function kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Function=mean; initial=:fft, maxiters=0, tol=0.001) where T
+function kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Function=mean; initial=:fft, maxiters=0, tol=0.001, recall=1.0) where T
     local err::Float64 = 0.0
 
     if initial in (:fft, :minmax, :enet)
@@ -112,10 +114,10 @@ function kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Fu
         initial = initial::AbstractVector{T}
     end
 
-    kcenters(dist, X, initial, centroid, maxiters=maxiters, tol=tol)
+    kcenters(dist, X, initial, centroid, maxiters=maxiters, tol=tol, recall=recall)
 end
 
-function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, centroid::Function=mean; maxiters=0, tol=0.001, verbose=false) where T
+function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, centroid::Function=mean; maxiters=0, tol=0.001, verbose=false, recall=1.0) where T
     # Lloyd's algoritm (kmeans)
     n = length(X)
     numcenters = length(C)
@@ -123,9 +125,17 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
         maxiters = ceil(Int, sqrt(n))
     end
 
+    function create_index(CC)
+        if recall >= 1.0
+            fit(Sequential, CC)
+        else
+            fit(SearchGraph, dist, CC, recall=recall)
+        end
+    end
+
     codes = Vector{Int}(undef, n)
     distances = zeros(Float64, n)
-    scores = [typemax(Float64), associate_centroids_and_score(dist, C, X, codes, distances)]
+    scores = [typemax(Float64), associate_centroids_and_score(dist, create_index(C), X, codes, distances)]
     iter = 0
 
     while iter < maxiters && abs(scores[end-1] - scores[end]) > tol
@@ -148,7 +158,7 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
         end
         
         verbose && println(stderr, "*** computing $(numcenters) nearest references ***")
-        s = associate_centroids_and_score(dist, C, X, codes, distances)
+        s = associate_centroids_and_score(dist, create_index(C), X, codes, distances)
 
         push!(scores, s)
         @assert !isnan(scores[end]) "ERROR invalid score $scores"
@@ -159,11 +169,10 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
     (centroids=C, codes=codes, distances=distances, scores=scores)
 end
 
-function associate_centroids_and_score(dist, C, X, codes, distances)
-    index = fit(Sequential, C)
+function associate_centroids_and_score(dist, Cindex, X, codes, distances)
     
     for objID in 1:length(X)
-        res = search(index, dist, X[objID], KnnResult(1))
+        res = search(Cindex, dist, X[objID], KnnResult(1))
         codes[objID] = first(res).objID
         distances[objID] = last(res).dist
     end
