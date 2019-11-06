@@ -18,8 +18,8 @@ using Test
 
 include("loaddata.jl")
 
+X, y = loadiris()
 @testset "Clustering with enet" begin
-    X, y = loadiris()
     refs = Vector{Int}()
     dmax = 0.0
 
@@ -30,11 +30,22 @@ include("loaddata.jl")
 end
 
 @testset "Clustering with dnet" begin
-    X, y = loadiris()
     dmax = 0.0
 
     for i in 2:5
         res = dnet(l2_distance, X, i^2)
         @info inertia([first(p).dist for p in res.seq])
     end
+end
+
+
+@testset "Clustering with KCenters" begin
+    dmax = 0.0
+
+    cfft = KCenters.kcenters(l2_distance, X, 8)
+    cdnet = KCenters.kcenters(l2_distance, X, 8, initial=:dnet)
+    crand = KCenters.kcenters(l2_distance, X, 8, initial=:random)
+    @show inertia(cfft.distances)
+    @show inertia(cdnet.distances)
+    @show inertia(crand.distances)
 end

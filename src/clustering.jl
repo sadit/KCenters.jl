@@ -13,7 +13,8 @@
 # limitations under the License.
 
 using SimilaritySearch
-export enet, dnet
+using StatsBase
+export enet, dnet, kcenters
 
 """
     enet(dist::Function, X::AbstractVector{T}, numcenters::Int, knr::Int=1; verbose=false) where T
@@ -91,7 +92,86 @@ function dnet(dist::Function, X::AbstractVector{T}, numcenters::Int; verbose=fal
     (irefs=irefs, seq=seq, dmax=dmax)
 end
 
-# score functions
+"""
+    kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Function=mean; initial=:fft, maxiters=0, tol=0.001) where T
+    kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, centroid::Function=mean; maxiters=0, tol=0.001) where T
+
+Performs a kcenters clustering of `X` using `dist` as distance function and `centroid` to compute centroid objects.
+It is based on the k-means algorithm yet using different algorithms as initial clusters.
+"""
+function kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Function=mean; initial=:fft, maxiters=0, tol=0.001) where T
+    local err::Float64 = 0.0
+
+    if initial in (:fft, :minmax, :enet)
+        initial = X[enet(dist, X, k).irefs]
+    elseif initial in (:dnet, :knnballs)
+        initial = X[dnet(dist, X, k).irefs]
+    elseif initial in (:rand, :random)
+        initial = rand(X, k)
+    else
+        initial = initial::AbstractVector{T}
+    end
+
+    kcenters(dist, X, initial, centroid, maxiters=maxiters, tol=tol)
+end
+
+function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, centroid::Function=mean; maxiters=0, tol=0.001, verbose=false) where T
+    # Lloyd's algoritm (kmeans)
+    n = length(X)
+    numcenters = length(C)
+    if maxiters == 0
+        maxiters = ceil(Int, sqrt(n))
+    end
+
+    codes = Vector{Int}(undef, n)
+    distances = zeros(Float64, n)
+    scores = [typemax(Float64), associate_centroids_and_score(dist, C, X, codes, distances)]
+    iter = 0
+
+    while iter < maxiters && abs(scores[end-1] - scores[end]) > tol
+        iter += 1
+        verbose && println(stderr, "*** starting iteration: $iter; scores: $scores ***")
+        clusters = [Int[] for i in 1:numcenters]
+        for (objID, plist) in enumerate(codes)
+            for refID in plist
+                push!(clusters[refID], objID)
+            end
+        end
+        
+        verbose && println(stderr, "*** computing centroids ***")
+        for i in 1:length(clusters)
+            plist = clusters[i]
+            # C[i] can be empty because we could be using approximate search
+            if length(plist) > 0
+                C[i] = centroid(X[plist])
+            end
+        end
+        
+        verbose && println(stderr, "*** computing $(numcenters) nearest references ***")
+        s = associate_centroids_and_score(dist, C, X, codes, distances)
+
+        push!(scores, s)
+        @assert !isnan(scores[end]) "ERROR invalid score $scores"
+        verbose && println(stderr, "*** new score with $(numcenters) references: $scores ***")
+    end
+    
+    verbose && println(stderr, "*** finished computation of $(numcenters) references, scores: $scores ***")
+    (centroids=C, codes=codes, distances=distances, scores=scores)
+end
+
+function associate_centroids_and_score(dist, C, X, codes, distances)
+    index = fit(Sequential, C)
+    
+    for objID in 1:length(X)
+        res = search(index, dist, X[objID], KnnResult(1))
+        codes[objID] = first(res).objID
+        distances[objID] = last(res).dist
+    end
+
+    mean(distances)
+end
+
+
 export sum_intracluster_squared_distances, sum_intracluster_distances, mean_intracluster_squared_distances, mean_intracluster_distances, inertia
 
 function sum_intracluster_squared_distances(nndist::AbstractVector)
