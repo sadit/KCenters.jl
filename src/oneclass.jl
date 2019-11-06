@@ -9,6 +9,7 @@ mutable struct OneClassClassifier{T}
     epsilon::Float64
 end
 
+
 function fit(::Type{OneClassClassifier}, dist::Function, X::AbstractVector{T}, m::Int; centroids=true) where T
     Q = fftclustering(dist, X, m)
     C = X[Q.irefs]
