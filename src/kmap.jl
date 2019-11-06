@@ -1,5 +1,5 @@
 using SimilaritySearch
-export kmap, partition, knr, sequence, fftclustering, centroid!
+export kmap, partition, knr, sequence, invindex, fftclustering
 
 """
     kmap(objects::AbstractVector{T}, kernel, refs::AbstractVector{T}) where {T}

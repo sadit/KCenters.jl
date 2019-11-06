@@ -3,8 +3,7 @@ using Test
 include("loaddata.jl")
 
 @testset "encode by farthest points" begin
-    using KernelMethods
-    using SimilaritySearch
+    using KCenters, SimilaritySearch
     using StatsBase: mean
 
     X, ylabels = loadiris()

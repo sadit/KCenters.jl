@@ -1,4 +1,4 @@
-export size_criterion, sqrt_criterion, change_criterion, log_criterion, epsilon_criterion
+export size_criterion, sqrt_criterion, change_criterion, fun_criterion, log_criterion, epsilon_criterion, salesman_criterion
 
 
 """
@@ -22,7 +22,7 @@ end
 """
     fun_criterion(fun::Function)
 
-Creates a stop-criterion function that stops whenever the number of far items reaches ``\lceil fun(|database|)\rceil``.
+Creates a stop-criterion function that stops whenever the number of far items reaches ``\\lceil fun(|database|)\\rceil``.
 Already defined examples:
 ```julia
     sqrt_criterion() = fun_criterion(sqrt)

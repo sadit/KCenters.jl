@@ -22,24 +22,35 @@ function dnet(callback::Function, dist::Function, X::AbstractVector{T}, k::Int) 
     metadist = (a::Int, b::Int) -> dist(X[a], X[b])
     I = fit(Sequential, shuffle!(collect(1:N)))
     res = KnnResult(k)
-    i = 0
 
     while length(I.db) > 0
-        i += 1
         empty!(res)
-        c = pop!(I.db)
-        search(I, metadist, c, res)
-        callback(c, res)
-        println(stderr, "computing dnet point $i, dmax: $(covrad(res))")
-
-        j = 0
-        for p in res
-            I.db[p.objID] = I.db[end-j]
-            j += 1
+        n = length(I.db)
+        search(I, metadist, n, res)
+        callback(I.db[n], res, I.db)
+        m = n - length(res)
+        rlist = sort!([p.objID for p in res])
+        numzeros = 0
+        while length(rlist) > 0
+            if rlist[end] > m
+                I.db[rlist[end]] = 0
+                pop!(rlist)
+                numzeros += 1
+            else
+                break
+            end
         end
 
-        for p in res
-            pop!(I.db)
+        E = @view I.db[m+1:end]
+        # @show "A", N, n, m, k, E
+        sort!(E)
+        # @show "B", N, n, m, k, E
+        E = @view I.db[m+1+numzeros:end]
+        # @show "C", N, n, m, k, E
+        # @show length(rlist) 
+        if length(E) > 0
+            I.db[rlist] .= E
         end
+        resize!(I.db, m)
     end
 end
