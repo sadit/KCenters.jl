@@ -92,7 +92,7 @@ Returns a named tuple ``(nn, irefs, dmax)``.
 - `dmax` a list of coverage-radius of each center (aligned with irefs centers) smallest distance among centers
 
 """
-function dnet(dist::Function, X::AbstractVector{T}, numcenters::Int) where T
+function dnet(dist::Function, X::AbstractVector{T}, numcenters::Int; verbose=false) where T
     # criterion = change_criterion(0.01)
     n = length(X)
     irefs = Int[]
@@ -106,14 +106,12 @@ function dnet(dist::Function, X::AbstractVector{T}, numcenters::Int) where T
             push!(seq[map[p.objID]], c, p.dist)
         end
     
-        println(stderr, "computing dnet point $c, dmax: $(dmax[end])")
+       verbose && println(stderr, "dnet -- selected-center: $(length(irefs)), id: $c, dmax: $(dmax[end])")
     end
     
     dnet(callback, dist, X, ceil(Int, n / numcenters))
-    @info [length(p) for p in seq]
-    @info sort(irefs), sum([length(p) for p in seq]), length(irefs)
-    println(stderr, "dnet numcenters: ", numcenters, "--> empty: ", findall(x->0 == length(x), seq))
-    println(stderr, "dnet more than one item: ", findall(x->length(x)>1, seq))
+    #@info [length(p) for p in seq]
+    #@info sort(irefs), sum([length(p) for p in seq]), length(irefs)
     (irefs=irefs, seq=seq, dmax=dmax)
 end
 
