@@ -42,12 +42,8 @@ function dnet(callback::Function, dist::Function, X::AbstractVector{T}, k::Int) 
         end
 
         E = @view I.db[m+1:end]
-        # @show "A", N, n, m, k, E
         sort!(E)
-        # @show "B", N, n, m, k, E
         E = @view I.db[m+1+numzeros:end]
-        # @show "C", N, n, m, k, E
-        # @show length(rlist) 
         if length(E) > 0
             I.db[rlist] .= E
         end

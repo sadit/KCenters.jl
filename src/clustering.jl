@@ -52,30 +52,6 @@ function enet(dist::Function, X::AbstractVector{T}, numcenters::Int, knr::Int=1;
     return (irefs=irefs, seq=nn, dmax=dmax)
 end
 
-
-## """
-##     centroid!(objects::AbstractVector{Vector{F}})::Vector{F} where {F<:Number}
-## 
-## Computes the centroid of the list of objects; use the dot operator (broadcast) to convert several groups of objects
-## """
-## function centroid!(objects::AbstractVector{Vector{F}})::Vector{F} where {F<:Number}
-##     u = copy(objects[1])
-##     @inbounds for i in 2:length(objects)
-##         w = objects[i]
-##         @simd for j in 1:length(u)
-##             u[j] += w[j]
-##         end
-##     end
-## 
-##     f = 1.0 / length(objects)
-##     @inbounds @simd for j in 1:length(u)
-##         u[j] *= f
-##     end
-## 
-##     return u
-## end
-
-
 """
     dnet(dist::Function, X::AbstractVector{T}, numcenters::Int, knr::Int) where T
 
@@ -114,7 +90,6 @@ function dnet(dist::Function, X::AbstractVector{T}, numcenters::Int; verbose=fal
     #@info sort(irefs), sum([length(p) for p in seq]), length(irefs)
     (irefs=irefs, seq=seq, dmax=dmax)
 end
-
 
 # score functions
 export sum_intracluster_squared_distances, sum_intracluster_distances, mean_intracluster_squared_distances, mean_intracluster_distances, inertia
