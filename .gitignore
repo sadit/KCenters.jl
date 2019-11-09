@@ -1,0 +1,7 @@
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+*~
+.*
+emotions.csv
+Manifest.toml
