@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/sadit/KCenters.jl.svg?branch=master)](https://travis-ci.org/sadit/KCenters.jl)
+[![codecov](https://codecov.io/gh/sadit/KCenters.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/sadit/KCenters.jl)
+[![Coverage Status](https://coveralls.io/repos/github/sadit/KCenters.jl/badge.svg?branch=master)](https://coveralls.io/github/sadit/KCenters.jl?branch=master)
 # KCenters.jl
 
 Provides an implementation of some distance based prototype selection algorithms
