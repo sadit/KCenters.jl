@@ -1,54 +1,41 @@
 import StatsBase: fit, predict
 using StatsBase
-export OneClassClassifier, regions, centroid, fit, predict
+export OneClassClassifier, fit, predict
 
 mutable struct OneClassClassifier{T}
     centers::Vector{T}
     freqs::Vector{Int}
     n::Int
-    epsilon::Float64
+    dmax::Vector{Float64}
 end
 
-
-function fit(::Type{OneClassClassifier}, dist::Function, X::AbstractVector{T}, m::Int; centroids=true) where T
-    Q = fftclustering(dist, X, m)
-    C = X[Q.irefs]
-    P = Dict(Q.irefs[i] => i for i in eachindex(Q.irefs))
-    freqs = zeros(Int, length(Q.irefs))
-    for nn in Q.NN
-        freqs[P[first(nn).objID]] += 1
+function fit(::Type{OneClassClassifier}, kcenters_::NamedTuple) where T
+    k = length(kcenters_.centroids)
+    freqs = zeros(Int, k)
+    dmax = zeros(Float64, k)
+    for i in eachindex(kcenters_.codes)
+        code = kcenters_.codes[i]
+        d = kcenters_.distances[i]
+        freqs[code] += 1
+        dmax[code] = max(dmax[code], d)
     end
 
-    if centroids
-        CC = centroid_correction(dist, X, C)
-        OneClassClassifier(CC, freqs, length(X), Q.dmax) 
-    else
-        OneClassClassifier(C, freqs, length(X), Q.dmax)
-    end
-    
+    OneClassClassifier(kcenters_.centroids, freqs, length(kcenters_.codes), dmax)
 end
 
-function regions(dist::Function, X, refs::Index)
-    I = invindex(dist, X, refs, k=1)
-    (freqs=[length(lst) for lst in I], regions=I)
-end
+# function regions(dist::Function, X, refs::Index)
+#     I = invindex(dist, X, refs, k=1)
+#     (freqs=[length(lst) for lst in I], regions=I)
+# end
 
-function regions(dist::Function, X, refs)
-    regions(dist, X, fit(Sequential, refs))
-end
-
-function centroid(D)
-    mean(D)
-end
-
-function centroid_correction(dist::Function, X, C)
-    [centroid(X[lst]) for lst in regions(dist, X, C).regions if length(lst) > 0]
-end
+# function regions(dist::Function, X, refs)
+#     regions(dist, X, fit(Sequential, refs))
+# end
 
 function predict(occ::OneClassClassifier{T}, dist::Function, q::T) where T
     seq = fit(Sequential, occ.centers)
     res = search(seq, dist, q, KnnResult(1))
-    #1.0 - first(res).dist  / occ.epsilon
-    (similarity=max(0.0, 1.0 - first(res).dist  / occ.epsilon), freq=occ.freqs[first(res).objID])
+    nn = first(res).objID
+    (similarity=max(0.0, 1.0 - first(res).dist  / occ.dmax[nn]), freq=occ.freqs[nn])
     #occ.freqs[first(res).objID] / occ.n
 end

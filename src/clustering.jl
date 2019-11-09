@@ -101,7 +101,7 @@ It is based on the k-means algorithm yet using different algorithms as initial c
 If recall is 1.0 then an exhaustive search is made to find associations of each item to its nearest cluster; if ``0 < recall < 0`` then an approximate index
 (`SearchGraph` from `SimilaritySearch.jl`) will be used for the same purpose; the `recall` controls the expected search quality (trade with search time).
 """
-function kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Function=mean; initial=:fft, maxiters=0, tol=0.001, recall=1.0) where T
+function kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Function=mean; initial=:fft, maxiters=0, tol=0.001, recall=1.0, verbose=false) where T
     local err::Float64 = 0.0
 
     if initial in (:fft, :minmax, :enet)
@@ -114,10 +114,10 @@ function kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Fu
         initial = initial::AbstractVector{T}
     end
 
-    kcenters(dist, X, initial, centroid, maxiters=maxiters, tol=tol, recall=recall)
+    kcenters(dist, X, initial, centroid, maxiters=maxiters, tol=tol, recall=recall, verbose=verbose)
 end
 
-function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, centroid::Function=mean; maxiters=0, tol=0.001, verbose=false, recall=1.0) where T
+function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, centroid::Function=mean; maxiters=0, tol=0.001, recall=1.0, verbose=false) where T
     # Lloyd's algoritm (kmeans)
     n = length(X)
     numcenters = length(C)
