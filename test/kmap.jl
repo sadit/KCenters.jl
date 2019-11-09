@@ -23,7 +23,9 @@ X, y = loadiris()
 @testset "Clustering with enet" begin
     for i in 2:5
         p = enet(l2_distance, X, i^2)
-        @info inertia([first(p).dist for p in p.seq])
+        d = [first(p).dist for p in p.seq]
+        @info inertia(d)
+        @test maximum(d) <= p.dmax
     end
 end
 
