@@ -14,7 +14,7 @@
 
 using SimilaritySearch
 using StatsBase
-export enet, dnet, kcenters
+export enet, dnet, kcenters, associate_centroids
 
 """
     enet(dist::Function, X::AbstractVector{T}, numcenters::Int, knr::Int=1; verbose=false) where T
@@ -135,12 +135,12 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
 
     codes = Vector{Int}(undef, n)
     distances = zeros(Float64, n)
-    scores = [typemax(Float64), associate_centroids_and_score(dist, create_index(C), X, codes, distances)]
+    err = [typemax(Float64), associate_centroids_and_compute_error(dist, create_index(C), X, codes, distances)]
     iter = 0
 
-    while iter < maxiters && abs(scores[end-1] - scores[end]) > tol
+    while iter < maxiters && abs(err[end-1] - err[end]) > tol
         iter += 1
-        verbose && println(stderr, "*** starting iteration: $iter; scores: $scores ***")
+        verbose && println(stderr, "*** starting iteration: $iter; err: $err ***")
         clusters = [Int[] for i in 1:numcenters]
         for (objID, plist) in enumerate(codes)
             for refID in plist
@@ -158,19 +158,18 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
         end
         
         verbose && println(stderr, "*** computing $(numcenters) nearest references ***")
-        s = associate_centroids_and_score(dist, create_index(C), X, codes, distances)
+        s = associate_centroids_and_compute_error(dist, create_index(C), X, codes, distances)
 
-        push!(scores, s)
-        @assert !isnan(scores[end]) "ERROR invalid score $scores"
-        verbose && println(stderr, "*** new score with $(numcenters) references: $scores ***")
+        push!(err, s)
+        @assert !isnan(err[end]) "ERROR invalid score $err"
+        verbose && println(stderr, "*** new score with $(numcenters) references: $err ***")
     end
     
-    verbose && println(stderr, "*** finished computation of $(numcenters) references, scores: $scores ***")
-    (centroids=C, codes=codes, distances=distances, scores=scores)
+    verbose && println(stderr, "*** finished computation of $(numcenters) references, err: $err ***")
+    (centroids=C, codes=codes, distances=distances, err=err)
 end
 
-function associate_centroids_and_score(dist, Cindex, X, codes, distances)
-    
+function associate_centroids_and_compute_error(dist, Cindex::Index, X, codes, distances)
     for objID in 1:length(X)
         res = search(Cindex, dist, X[objID], KnnResult(1))
         codes[objID] = first(res).objID
@@ -178,6 +177,24 @@ function associate_centroids_and_score(dist, Cindex, X, codes, distances)
     end
 
     mean(distances)
+end
+
+"""
+    associate_centroids(dist, C, X)
+
+Returns the named tuple `(codes=codes, distances=distances, err=s)` where codes contains the nearest centroid
+index for each item in `X` under the context of the `dist` distance function. `C` is the set of centroids and
+`X` the dataset of objects. `C` also can be provided as a SimilaritySearch's Index.
+"""
+function associate_centroids(dist, C, X)
+    n = length(X)
+    codes = Vector{Int}(undef, n)
+    distances = Vector{Float64}(undef, n)
+    if C isa AbstractVector
+        C = fit(Sequential, C)
+    end
+    s = associate_centroids_and_compute_error(dist, C, X, codes, distances)
+    (codes=codes, distances=distances, err=s)
 end
 
 
