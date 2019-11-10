@@ -17,11 +17,11 @@ include("loaddata.jl")
                 y = ylabels .== label
                 A = X[y]
                 centers = kcenters(dist, A, k, initial=initial, maxiters=maxiters, tol=0.0) # TODO Add more control to kcenters or use a kcenters output as input
-                occ = fit(OneClassClassifier, centers)
-                ypred = [predict(occ, dist, x).similarity > 0 for x in X]
+                occ = fit(VoronoiHistogram, centers)
+                ypred = [predict(occ, dist, x) for x in X]
                 @show predict(occ, dist, X[1])
                 push!(L, mean(ypred .== y))
-                @test L[end] > 0.7
+                @test L[end] > 0.6
             end
 
             macrorecall = mean(L)
