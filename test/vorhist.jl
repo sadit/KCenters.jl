@@ -17,7 +17,7 @@ include("loaddata.jl")
                 y = ylabels .== label
                 A = X[y]
                 centers = kcenters(dist, A, k, initial=initial, maxiters=maxiters, tol=0.0) # TODO Add more control to kcenters or use a kcenters output as input
-                occ = fit(VoronoiHistogram, centers)
+                occ = fit(DeloneHistogram, centers)
                 ypred = [predict(occ, dist, x) for x in X]
                 @show predict(occ, dist, X[1])
                 push!(L, mean(ypred .== y))

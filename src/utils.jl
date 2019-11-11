@@ -1,28 +1,6 @@
 using SimilaritySearch
-export kmap, partition, knr, sequence, invindex, fftclustering
+export partition, knr, sequence, invindex
 
-"""
-    kmap(objects::AbstractVector{T}, kernel, refs::AbstractVector{T}) where {T}
-
-Transforms `objects` to a new representation space induced by ``(refs, dist, kernel)``
-- `refs` a list of references
-- `kernel` a kernel function (and an embedded distance) with signature ``(T, T) \\rightarrow Float64``
-"""
-function kmap(objects::AbstractVector{T}, kernel, refs::AbstractVector{T}) where {T}
-    # X = Vector{T}(length(objects))
-    m = Vector{Vector{Float64}}(undef, length(objects))
-    @inbounds for i in 1:length(objects)
-        u = Vector{Float64}(undef, length(refs))
-        obj = objects[i]
-        for j in 1:length(refs)
-            u[j] = kernel(obj, refs[j])
-        end
-
-        m[i] = u
-    end
-
-    return m
-end
 
 """
     partition(callback::Function, dist::Function, objects::AbstractVector{T}, refs::Index; k::Int=1) where T
@@ -93,3 +71,4 @@ function knr(dist::Function, objects::AbstractVector{T}, refs::Index) where T
     end
     s
 end
+

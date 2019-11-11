@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#include("kmap.jl")
-#include("vorhist.jl")
+include("kmap.jl")
+include("vorhist.jl")
 include("invindex.jl")
