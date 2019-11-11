@@ -14,7 +14,7 @@
 
 using SimilaritySearch
 using StatsBase
-export enet, dnet, kcenters, associate_centroids
+export enet, dnet, kcenters, kcenters_by_label, associate_centroids
 
 """
     enet(dist::Function, X::AbstractVector{T}, numcenters::Int, knr::Int=1; verbose=false) where T
@@ -90,6 +90,29 @@ function dnet(dist::Function, X::AbstractVector{T}, numcenters::Int; verbose=fal
     #@info [length(p) for p in seq]
     #@info sort(irefs), sum([length(p) for p in seq]), length(irefs)
     (irefs=irefs, seq=seq, dmax=dmax)
+end
+
+"""
+    kcenters_by_label(dist::Function, X::AbstractVector{T}, y::AbstractVector, centroid::Function=mean) where T
+
+Computes a centroid per region (each region is defined by the set of items having the same label in `y`).
+The output is compatible with `kcenters` function when `eltype(y)` is Int
+"""
+function kcenters_by_label(dist::Function, X::AbstractVector{T}, y::AbstractVector{I}, centroid::Function=mean) where {T,I<:Integer}
+    labels = sort!(unique(y))
+    m = length(labels)
+    centers = Vector{T}(undef, m)
+    populations = Vector{Int}(undef, m)
+
+    for i in eachindex(labels)
+        label = labels[i]
+        L = X[label .== y]
+        centers[i] = centroid(L)
+        populations[i] = length(L)
+    end
+
+    distances = [dist(X[i], centers[y[i]]) for i in eachindex(X)]
+    (centroids=centers, codes=y, distances=distances, err=sum(distances))
 end
 
 """
@@ -170,8 +193,10 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
 end
 
 function associate_centroids_and_compute_error(dist, Cindex::Index, X, codes, distances)
+    res = KnnResult(1)
     for objID in 1:length(X)
-        res = search(Cindex, dist, X[objID], KnnResult(1))
+        empty!(res)
+        res = search(Cindex, dist, X[objID], res)
         codes[objID] = first(res).objID
         distances[objID] = last(res).dist
     end

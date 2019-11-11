@@ -49,7 +49,7 @@ function sigmoid_kernel(dist::Function)
     function fun(a, b, σ::AbstractFloat)::Float64
         d = dist(a, b)
         d < 1e-6 && return 1.0
-        1 / (1 + exp(σ - d))
+        1 / (1 + exp(-1.0 + d/σ))
     end
 end
 
