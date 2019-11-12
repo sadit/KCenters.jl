@@ -53,11 +53,7 @@ end
         nc = fit(NearestCentroid, D, y)
         @show nc.class_map
         ypred = predict(nc, kernel(dist), X)
-        @show mean(ypred .== y)
         @test mean(ypred .== y) > 0.8
-        #nc = fit(NearestCentroid, D)
-        #ypred = predict(nc, kernel(dist), X)
-        #@test mean(ypred .== y) > 0.8
     end
 end
 
