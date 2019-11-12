@@ -14,6 +14,13 @@ mutable struct DeloneInvIndex{T} <: Index
     region_expansion::Int
 end
 
+"""
+    fit(::Type{DeloneInvIndex}, X::AbstractVector{T}, kcenters_::NamedTuple, region_expansion=3) where T
+
+Creates a DeloneInvIndex, which is a metric index using the `kcenters` output and `X`.
+This is an index that implements approximate search.
+
+"""
 function fit(::Type{DeloneInvIndex}, X::AbstractVector{T}, kcenters_::NamedTuple, region_expansion=3) where T
     k = length(kcenters_.centroids)
     dmax = zeros(Float64, k)
@@ -30,6 +37,11 @@ function fit(::Type{DeloneInvIndex}, X::AbstractVector{T}, kcenters_::NamedTuple
     DeloneInvIndex(X, C, lists, dmax, length(kcenters_.codes), region_expansion)
 end
 
+"""
+    search(index::DeloneInvIndex{T}, dist::Function, q::T, res::KnnResult) where T
+
+Searches nearest neighbors of `q` inside the `index` under the distance function `dist`.
+"""
 function search(index::DeloneInvIndex{T}, dist::Function, q::T, res::KnnResult) where T
     cres = search(index.centers, dist, q, KnnResult(index.region_expansion))
     for c in cres
@@ -42,6 +54,13 @@ function search(index::DeloneInvIndex{T}, dist::Function, q::T, res::KnnResult) 
     res
 end
 
+
+"""
+    optimize!(index::DeloneInvIndex{T}, dist::Function, recall=0.9; k=10, num_queries=128, perf=nothing, verbose=false) where T
+
+Tries to configure `index` to achieve the specified recall for fetching `k` nearest neighbors. Notice that if `perf` is not given then
+the index will use dataset's items and therefore it will adjust for them.
+"""
 function optimize!(index::DeloneInvIndex{T}, dist::Function, recall=0.9; k=10, num_queries=128, perf=nothing, verbose=false) where T
     verbose && println("KCenters.DeloneInvIndex> optimizing for recall=$(recall)")
     if perf === nothing
