@@ -2,7 +2,7 @@ using Test
 
 include("loaddata.jl")
 using KCenters, SimilaritySearch
-using StatsBase: mean
+using StatsBase
 
 @testset "One class classifier with DeloneHistogram" begin
 
@@ -30,22 +30,34 @@ using StatsBase: mean
     end
 end
 
-@testset "NearestCentroid with DeloneHistogram" begin
+@testset "NearestCentroid" begin
     X, ylabels = loadiris()
     M = Dict(label => i for (i, label) in enumerate(unique(ylabels) |> sort!))
     y = [M[y] for y in ylabels]
-    dist = l2_distance
+    dist = lp_distance(0.7)
     for kernel in [gaussian_kernel, laplacian_kernel, cauchy_kernel, sigmoid_kernel, tanh_kernel, relu_kernel]
         C = kcenters_by_label(dist, X, y)
         @info "XXXXXX>", (kernel, dist)
 
         D = fit(DeloneHistogram, C)
-
-        # @show transform(D.centers.db, D.dmax, kernel(dist), X[1:3], softmax!) ## TODO add some test, right now we only ensure that it runs
         nc = fit(NearestCentroid, D)
         ypred = predict(nc, kernel(dist), X)
-        
-        @info mean(ypred .== y)
+        @test mean(ypred .== y) > 0.8
+    end
+
+    for kernel in [gaussian_kernel, laplacian_kernel, cauchy_kernel, sigmoid_kernel, tanh_kernel, relu_kernel]
+        @info "XXXXXX====>", (kernel, dist)
+
+        C = kcenters(dist, X, 21)
+        D = fit(DeloneInvIndex, X, C, 1)
+        nc = fit(NearestCentroid, D, y)
+        @show nc.class_map
+        ypred = predict(nc, kernel(dist), X)
+        @show mean(ypred .== y)
+        @test mean(ypred .== y) > 0.8
+        #nc = fit(NearestCentroid, D)
+        #ypred = predict(nc, kernel(dist), X)
+        #@test mean(ypred .== y) > 0.8
     end
 end
 
