@@ -36,7 +36,7 @@ end
     y = [M[y] for y in ylabels]
     dist = lp_distance(0.7)
     for kernel in [gaussian_kernel, laplacian_kernel, cauchy_kernel, sigmoid_kernel, tanh_kernel, relu_kernel]
-        C = kcenters_by_label(dist, X, y)
+        C = kcenters(dist, X, y)
         @info "XXXXXX>", (kernel, dist)
 
         D = fit(DeloneHistogram, C)

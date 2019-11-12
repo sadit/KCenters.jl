@@ -14,7 +14,7 @@
 
 using SimilaritySearch
 using StatsBase
-export enet, dnet, kcenters, kcenters_by_label, associate_centroids
+export enet, dnet, kcenters, kcenters, associate_centroids
 
 """
     enet(dist::Function, X::AbstractVector{T}, numcenters::Int, knr::Int=1; verbose=false) where T
@@ -93,12 +93,12 @@ function dnet(dist::Function, X::AbstractVector{T}, numcenters::Int; verbose=fal
 end
 
 """
-    kcenters_by_label(dist::Function, X::AbstractVector{T}, y::AbstractVector, centroid::Function=mean) where T
+    kcenters(dist::Function, X::AbstractVector{T}, y::AbstractVector, centroid::Function=mean) where T
 
 Computes a centroid per region (each region is defined by the set of items having the same label in `y`).
 The output is compatible with `kcenters` function when `eltype(y)` is Int
 """
-function kcenters_by_label(dist::Function, X::AbstractVector{T}, y::AbstractVector{I}, centroid::Function=mean) where {T,I<:Integer}
+function kcenters(dist::Function, X::AbstractVector{T}, y::AbstractVector{I}, centroid::Function=mean) where {T,I<:Integer}
     labels = sort!(unique(y))
     m = length(labels)
     centers = Vector{T}(undef, m)

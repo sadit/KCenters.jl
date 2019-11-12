@@ -19,7 +19,7 @@ end
     fit(::Type{NearestCentroid}, D::DeloneHistogram, class_map::Vector{Int}=Int[])
     fit(::Type{NearestCentroid}, D::DeloneInvIndex, labels::AbstractVector)
 
-Creates a NearestCentroid classifier using the output of either `kcenters` or `kcenters_by_label` as input
+Creates a NearestCentroid classifier using the output of either `kcenters` or `kcenters` as input
 through either a `DeloneHistogram` or `DeloneInvIndex` struct.
 If `class_map` is given, then it contains the list of labels to be reported associated to centers; if they are not specified,
 then they are assigned in consecutive order for `DeloneHistogram` and as the most popular label for `DeloneInvIndex`.
