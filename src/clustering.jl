@@ -161,7 +161,7 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
     err = [typemax(Float64), associate_centroids_and_compute_error(dist, create_index(C), X, codes, distances)]
     iter = 0
 
-    while iter < maxiters && abs(err[end-1] - err[end]) > tol
+    while iter < maxiters && err[end-1] > err[end] + tol
         iter += 1
         verbose && println(stderr, "*** starting iteration: $iter; err: $err ***")
         clusters = [Int[] for i in 1:numcenters]
