@@ -32,7 +32,7 @@ function fit(::Type{NearestCentroid}, D::DeloneHistogram, class_map::Vector{Int}
     NearestCentroid(D.centers.db, D.dmax, class_map)
 end
 
-function fit(::Type{NearestCentroid}, D::DeloneInvIndex, labels::AbstractVector; verbose=true)
+function fit(::Type{NearestCentroid}, D::DeloneInvIndex, labels::AbstractVector; verbose=false)
     m = length(D.lists)
     class_map = Vector{Int}(undef, m)
     nclasses = length(unique(labels))
