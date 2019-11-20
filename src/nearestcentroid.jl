@@ -16,15 +16,15 @@ mutable struct NearestCentroid{T}
 end
 
 """
-    fit(::Type{NearestCentroid}, D::DeloneHistogram, class_map::Vector{Int}=Int[])
-    fit(::Type{NearestCentroid}, D::DeloneInvIndex, labels::AbstractVector)
+    fit(::Type{NearestCentroid}, D::DeloneHistogram, class_map::Vector{Int}=Int[]; verbose=true)
+    fit(::Type{NearestCentroid}, D::DeloneInvIndex, labels::AbstractVector; verbose=true)
 
 Creates a NearestCentroid classifier using the output of either `kcenters` or `kcenters` as input
 through either a `DeloneHistogram` or `DeloneInvIndex` struct.
 If `class_map` is given, then it contains the list of labels to be reported associated to centers; if they are not specified,
 then they are assigned in consecutive order for `DeloneHistogram` and as the most popular label for `DeloneInvIndex`.
 """
-function fit(::Type{NearestCentroid}, D::DeloneHistogram, class_map::Vector{Int}=Int[])
+function fit(::Type{NearestCentroid}, D::DeloneHistogram, class_map::Vector{Int}=Int[]; verbose=true)
     if length(class_map) == 0
         class_map = collect(1:length(D.centers.db))
     end
@@ -32,12 +32,21 @@ function fit(::Type{NearestCentroid}, D::DeloneHistogram, class_map::Vector{Int}
     NearestCentroid(D.centers.db, D.dmax, class_map)
 end
 
-function fit(::Type{NearestCentroid}, D::DeloneInvIndex, labels::AbstractVector)
+function fit(::Type{NearestCentroid}, D::DeloneInvIndex, labels::AbstractVector; verbose=true)
     m = length(D.lists)
     class_map = Vector{Int}(undef, m)
+    nclasses = length(unique(labels))
+    _ent2(f, n) = f == 0 ? 0.0 : f / n * log(n / f)
+
     for i in 1:m
         lst = D.lists[i]
-        freq, pos = findmax(counts(labels[lst], 1:m))
+        freqs = counts(labels[lst], 1:nclasses)
+        if verbose
+            n = sum(freqs)
+            ent = sum(_ent2(f, n) for f in freqs) / log(nclasses)
+            println(stderr, "centroid: $i, normalized-entropy: $ent, ", freqs)
+        end
+        freq, pos = findmax(freqs)
         class_map[i] = pos
     end
 
