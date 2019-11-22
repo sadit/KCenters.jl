@@ -2,7 +2,7 @@ using Test
 
 include("loaddata.jl")
 
-@testset "encode by farthest points" begin
+@testset "Testing Delone Inverted Index" begin
     using KCenters, SimilaritySearch
     using StatsBase: mean
     dim = 8

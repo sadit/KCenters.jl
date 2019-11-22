@@ -18,11 +18,15 @@ end
 """
     fit(::Type{NearestCentroid}, D::DeloneHistogram, class_map::Vector{Int}=Int[]; verbose=true)
     fit(::Type{NearestCentroid}, D::DeloneInvIndex, labels::AbstractVector; verbose=true)
+    fit(::Type{NearestCentroid}, dist::Function, input_clusters::NamedTuple, train_X::AbstractVector, train_y::AbstractVector{_Integer}, centroid::Function=mean; split_entropy=0.1, verbose=false) where _Integer<:Integer
 
 Creates a NearestCentroid classifier using the output of either `kcenters` or `kcenters` as input
 through either a `DeloneHistogram` or `DeloneInvIndex` struct.
 If `class_map` is given, then it contains the list of labels to be reported associated to centers; if they are not specified,
 then they are assigned in consecutive order for `DeloneHistogram` and as the most popular label for `DeloneInvIndex`.
+
+The third form is a little bit more complex, the idea is to divide clusters whenever their label-diversity surpasses a given threshold (measured with `split_entropy`).
+This function receives a distance function `dist` and the original dataset `train_X` in addition to other mentioned arguments.
 """
 function fit(::Type{NearestCentroid}, D::DeloneHistogram, class_map::Vector{Int}=Int[]; verbose=true)
     if length(class_map) == 0
@@ -30,6 +34,60 @@ function fit(::Type{NearestCentroid}, D::DeloneHistogram, class_map::Vector{Int}
     end
 
     NearestCentroid(D.centers.db, D.dmax, class_map)
+end
+
+function fit(::Type{NearestCentroid}, dist::Function, input_clusters::NamedTuple, train_X::AbstractVector, train_y::AbstractVector{_Integer}, centroid::Function=mean; split_entropy=0.3, verbose=false) where _Integer<:Integer
+    D = fit(DeloneInvIndex, train_X, input_clusters)
+    centroids = eltype(train_X)[] # clusters
+    classes = Int[] # class mapping between clusters and classes
+    dmax = Float64[]
+    m = length(D.lists)
+    nclasses = length(unique(train_y))
+    
+    _ent2(f, n) = (f == 0) ? 0.0 : (f / n * log(n / f))
+
+    for i in 1:m
+        lst = D.lists[i]
+        freqs = counts(train_y[lst], 1:nclasses)
+        labels = findall(f -> f > 0, freqs)
+        e = Float64(length(labels))
+        if e == 1.0
+            e = 0.0
+        else
+            n = sum(freqs)
+            invlognclasses = 1 / log(length(labels))
+            e = sum(_ent2(f, n) for f in freqs) * invlognclasses
+        end
+        verbose && println(stderr, "** centroid: $i, normalized-entropy: $e, ", freqs)
+        if e > split_entropy
+            labels = findall(f -> f > 0, freqs)
+            L = train_y[lst]
+            verbose && println(stderr, "centroid $i, labels=$labels, freqs: $freqs")
+            for (j, l) in enumerate(labels)
+                LL = lst[L .== l]
+                c = centroid(train_X[LL])
+                push!(centroids, c)
+                push!(classes, l)
+                d = 0.0
+                for objID in LL
+                    d = max(d, dist(train_X[objID], c))
+                end
+                push!(dmax, d)
+            end
+        else
+            push!(centroids, input_clusters.centroids[i])
+            freq, pos = findmax(freqs)
+            push!(classes, pos)
+            d = 0.0
+            for objID in lst
+                d = max(d, dist(train_X[objID], centroids[end]))
+            end
+            push!(dmax, d)
+         end
+    end
+
+verbose && println(stderr, "finished with $(length(centroids)) centroids; started with $(length(input_clusters.centroids))")
+NearestCentroid(centroids, dmax, classes)
 end
 
 function fit(::Type{NearestCentroid}, D::DeloneInvIndex, labels::AbstractVector; verbose=false)

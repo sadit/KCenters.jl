@@ -34,10 +34,10 @@ end
     X, ylabels = loadiris()
     M = Dict(label => i for (i, label) in enumerate(unique(ylabels) |> sort!))
     y = [M[y] for y in ylabels]
-    dist = lp_distance(0.7)
+    dist = l2_distance
     for kernel in [gaussian_kernel, laplacian_kernel, cauchy_kernel, sigmoid_kernel, tanh_kernel, relu_kernel]
         C = kcenters(dist, X, y)
-        @info "XXXXXX>", (kernel, dist)
+        @info "XXXXXX===== rocchio like>", (kernel, dist)
 
         D = fit(DeloneHistogram, C)
         nc = fit(NearestCentroid, D)
@@ -45,8 +45,8 @@ end
         @test mean(ypred .== y) > 0.8
     end
 
-    for kernel in [gaussian_kernel, laplacian_kernel, cauchy_kernel, sigmoid_kernel, tanh_kernel, relu_kernel]
-        @info "XXXXXX====>", (kernel, dist)
+    for kernel in [relu_kernel]
+        @info "XXXXXX==== clustering>", (kernel, dist)
 
         C = kcenters(dist, X, 21)
         D = fit(DeloneInvIndex, X, C, 1)
@@ -55,5 +55,17 @@ end
         ypred = predict(nc, kernel(dist), X)
         @test mean(ypred .== y) > 0.8
     end
+
+    for kernel in [relu_kernel]
+        @info "XXXXXX==== split_entropy>", (kernel, dist)
+        C = kcenters(dist, X, 12)
+        nc = fit(NearestCentroid, dist, C, X, y, verbose=true, split_entropy=0.5)
+        @show nc.class_map
+        ypred = predict(nc, kernel(dist), X)
+        acc = mean(ypred .== y)
+        @show acc
+        @test acc > 0.8
+    end
+    exit(0)
 end
 
