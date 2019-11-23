@@ -36,18 +36,37 @@ function fit(::Type{NearestCentroid}, D::DeloneHistogram, class_map::Vector{Int}
     NearestCentroid(D.centers.db, D.dmax, class_map)
 end
 
+function fit(::Type{NearestCentroid}, C::NamedTuple, class_map::Vector{Int}=Int[]; verbose=true)
+    D = fit(DeloneHistogram, C)
+    fit(NearestCentroid, D, class_map)
+end
+
+function _labelmap(codes)
+    _lists = Dict{Int,Vector{Int}}()
+    for (pos, code) in enumerate(codes)
+        lst = get(_lists, code, nothing)
+        if lst === nothing
+            _lists[code] = [pos]
+        else
+            push!(lst, pos)
+        end
+    end
+
+    _lists
+end
+
 function fit(::Type{NearestCentroid}, dist::Function, input_clusters::NamedTuple, train_X::AbstractVector, train_y::AbstractVector{_Integer}, centroid::Function=mean; split_entropy=0.3, verbose=false) where _Integer<:Integer
-    D = fit(DeloneInvIndex, train_X, input_clusters)
+    _lists = _labelmap(input_clusters.codes)
     centroids = eltype(train_X)[] # clusters
     classes = Int[] # class mapping between clusters and classes
     dmax = Float64[]
-    m = length(D.lists)
+    m = length(input_clusters.centroids)
     nclasses = length(unique(train_y))
     
     _ent2(f, n) = (f == 0) ? 0.0 : (f / n * log(n / f))
 
     for i in 1:m
-        lst = D.lists[i]
+        lst = _lists[i]
         freqs = counts(train_y[lst], 1:nclasses)
         labels = findall(f -> f > 0, freqs)
         e = Float64(length(labels))
@@ -58,6 +77,7 @@ function fit(::Type{NearestCentroid}, dist::Function, input_clusters::NamedTuple
             invlognclasses = 1 / log(length(labels))
             e = sum(_ent2(f, n) for f in freqs) * invlognclasses
         end
+
         verbose && println(stderr, "** centroid: $i, normalized-entropy: $e, ", freqs)
         if e > split_entropy
             labels = findall(f -> f > 0, freqs)
@@ -86,19 +106,19 @@ function fit(::Type{NearestCentroid}, dist::Function, input_clusters::NamedTuple
          end
     end
 
-verbose && println(stderr, "finished with $(length(centroids)) centroids; started with $(length(input_clusters.centroids))")
-NearestCentroid(centroids, dmax, classes)
+    verbose && println(stderr, "finished with $(length(centroids)) centroids; started with $(length(input_clusters.centroids))")
+    NearestCentroid(centroids, dmax, classes)
 end
 
-function fit(::Type{NearestCentroid}, D::DeloneInvIndex, labels::AbstractVector; verbose=false)
+function fit(::Type{NearestCentroid}, D::DeloneInvIndex, train_y::AbstractVector; verbose=false)
     m = length(D.lists)
     class_map = Vector{Int}(undef, m)
-    nclasses = length(unique(labels))
+    nclasses = length(unique(train_y))
     _ent2(f, n) = f == 0 ? 0.0 : f / n * log(n / f)
 
     for i in 1:m
         lst = D.lists[i]
-        freqs = counts(labels[lst], 1:nclasses)
+        freqs = counts(train_y[lst], 1:nclasses)
         if verbose
             n = sum(freqs)
             ent = sum(_ent2(f, n) for f in freqs) / log(nclasses)
