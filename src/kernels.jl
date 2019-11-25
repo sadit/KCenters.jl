@@ -1,5 +1,5 @@
 
-export gaussian_kernel, laplacian_kernel, cauchy_kernel, sigmoid_kernel, tanh_kernel, relu_kernel
+export gaussian_kernel, laplacian_kernel, cauchy_kernel, sigmoid_kernel, tanh_kernel, relu_kernel, direct_kernel
 
 """
     gaussian_kernel(dist::Function)
@@ -75,5 +75,16 @@ Creates a relu-like kernel with the given distance function
 function relu_kernel(dist::Function)
     function fun(a, b, σ::AbstractFloat)::Float64
         max(0.0, 1.0 - dist(a, b) / σ)
+    end
+end
+
+"""
+    direct_kernel(dist::Function)
+
+Creates kernel just computing ``1/dist(\\cdot, \\cdot)``
+"""
+function direct_kernel(dist::Function)
+    function fun(a, b, σ::AbstractFloat)::Float64
+        1 / dist(a, b)
     end
 end

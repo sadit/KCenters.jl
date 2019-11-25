@@ -35,7 +35,7 @@ end
     M = Dict(label => i for (i, label) in enumerate(unique(ylabels) |> sort!))
     y = [M[y] for y in ylabels]
     dist = l2_distance
-    for kernel in [gaussian_kernel, laplacian_kernel, cauchy_kernel, sigmoid_kernel, tanh_kernel, relu_kernel]
+    for kernel in [gaussian_kernel, laplacian_kernel, cauchy_kernel, sigmoid_kernel, tanh_kernel, relu_kernel, direct_kernel]
         C = kcenters(dist, X, y)
         @info "XXXXXX===== rocchio like>", (kernel, dist)
 
@@ -65,7 +65,13 @@ end
         acc = mean(ypred .== y)
         @show acc
         @test acc > 0.8
+        
+        C = kcenters(dist, X, 12, maxiters=0, verbose=true)
+        nc = fit(NearestCentroid, dist, C, X, y, verbose=true, split_entropy=0.5)
+        ypred = predict(nc, direct_kernel(dist), X, 3) # a direct kernel is required for the iris dataset and knn
+        acc = mean(ypred .== y)
+        @show acc
+        @test acc > 0.8
     end
-    exit(0)
 end
 

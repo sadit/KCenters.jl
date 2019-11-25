@@ -13,6 +13,7 @@ mutable struct NearestCentroid{T}
     centers::Vector{T}
     dmax::Vector{Float64}
     class_map::Vector{Int}
+    nclasses::Int
 end
 
 """
@@ -33,7 +34,7 @@ function fit(::Type{NearestCentroid}, D::DeloneHistogram, class_map::Vector{Int}
         class_map = collect(1:length(D.centers.db))
     end
 
-    NearestCentroid(D.centers.db, D.dmax, class_map)
+    NearestCentroid(D.centers.db, D.dmax, class_map, length(unique(class_map)))
 end
 
 function fit(::Type{NearestCentroid}, C::NamedTuple, class_map::Vector{Int}=Int[]; verbose=true)
@@ -107,7 +108,7 @@ function fit(::Type{NearestCentroid}, dist::Function, input_clusters::NamedTuple
     end
 
     verbose && println(stderr, "finished with $(length(centroids)) centroids; started with $(length(input_clusters.centroids))")
-    NearestCentroid(centroids, dmax, classes)
+    NearestCentroid(centroids, dmax, classes, nclasses)
 end
 
 function fit(::Type{NearestCentroid}, D::DeloneInvIndex, train_y::AbstractVector; verbose=false)
@@ -128,7 +129,7 @@ function fit(::Type{NearestCentroid}, D::DeloneInvIndex, train_y::AbstractVector
         class_map[i] = pos
     end
 
-    NearestCentroid(D.centers.db, D.dmax, class_map)
+    NearestCentroid(D.centers.db, D.dmax, class_map, nclasses)
 end
 
 """
@@ -137,7 +138,7 @@ end
 
 Predicts the class of `x` using the label of the nearest centroid under the `kernel` function
 """
-function predict(nc::NearestCentroid{T}, kernel::Function, X::AbstractVector{T}) where T
+function predict(nc::NearestCentroid{T}, kernel::Function, X::AbstractVector{T}, ::Type) where T
     res = KnnResult(1)
     C = nc.centers
     dmax = nc.dmax
@@ -154,6 +155,27 @@ function predict(nc::NearestCentroid{T}, kernel::Function, X::AbstractVector{T})
     end
     
     L
+end
+
+function predict(nc::NearestCentroid{T}, kernel::Function, X::AbstractVector{T}, k=1) where T
+    res = KnnResult(k)
+    C = nc.centers
+    dmax = nc.dmax
+    ypred = Vector{Int}(undef, length(X))
+    for j in eachindex(X)
+        empty!(res)
+        x = X[j]
+        for i in eachindex(C)
+            s = eval_kernel(kernel, x, C[i], dmax[i])
+            push!(res, i, -s)
+        end
+
+        c = counts([nc.class_map[p.objID] for p in res], 1:nc.nclasses)
+        #@show c, findmax(c), k
+        ypred[j] = findmax(c)[end]
+    end
+    
+    ypred
 end
 
 function predict(nc::NearestCentroid{T}, kernel::Function, x::T) where T
