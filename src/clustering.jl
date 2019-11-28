@@ -222,23 +222,3 @@ function associate_centroids(dist, C, X)
     s = associate_centroids_and_compute_error(dist, C, X, codes, distances)
     (codes=codes, distances=distances, err=s)
 end
-
-
-export sum_intracluster_squared_distances, sum_intracluster_distances, mean_intracluster_squared_distances, mean_intracluster_distances, inertia
-
-function sum_intracluster_squared_distances(nndist::AbstractVector)
-    s = 0.0
-    for d in nndist
-        s += d^2
-    end
-
-    s
-end
-
-function sum_intracluster_distances(nndist::AbstractVector)
-    sum(nndist)
-end
-
-mean_intracluster_squared_distances(nndist) = sum_intracluster_squared_distances(nndist) / length(nndist)
-mean_intracluster_distances(nndist) = sum_intracluster_distances(nndist) / length(nndist)
-inertia(nndist) = sum_intracluster_squared_distances(nndist)
