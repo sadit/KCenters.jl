@@ -65,9 +65,9 @@ function fit(::Type{NearestCentroid}, dist::Function, input_clusters::NamedTuple
     nclasses = length(unique(train_y))
     
     _ent2(f, n) = (f == 0) ? 0.0 : (f / n * log(n / f))
-
     for i in 1:m
-        lst = _lists[i]
+        lst = get(_lists, i, nothing)
+        lst === nothing && continue
         freqs = counts(train_y[lst], 1:nclasses)
         labels = findall(f -> f > 0, freqs)
         e = Float64(length(labels))
@@ -171,7 +171,6 @@ function predict(nc::NearestCentroid{T}, kernel::Function, X::AbstractVector{T},
         end
 
         c = counts([nc.class_map[p.objID] for p in res], 1:nc.nclasses)
-        #@show c, findmax(c), k
         ypred[j] = findmax(c)[end]
     end
     
