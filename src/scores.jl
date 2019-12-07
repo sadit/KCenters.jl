@@ -50,10 +50,10 @@ function precision_score(gold, predict; weight=:macro)::Float64
     end
 end
 
+nan_zero(x) = isnan(x) ? zero(x) : x
+
 function f1_(p, r)::Float64
-    den = p + r
-    # TODO Warn on zero denominator
-    den == 0.0 ? 0.0 : 2 * p * r / den
+    nan_zero(2 * p * r / (p + r))
 end
 
 """
