@@ -1,3 +1,6 @@
+# This file is a part of KCenters.jl
+# License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
+
 module KCenters
 
 include("scores.jl")
@@ -9,7 +12,6 @@ include("vorhist.jl")
 include("clustering.jl")
 include("invindex.jl")
 include("kernels.jl")
-include("nearestcentroid.jl")
 
 export transform, softmax!
 """
@@ -30,7 +32,12 @@ function transform(centers::AbstractVector{T}, dmax::AbstractVector, kernel::Fun
     x
 end
 
-function transform(centers::AbstractVector{T}, dmax::AbstractVector, kernel::Function, queries::AbstractVector{T}, normalize!::Function=identity) where T
+function transform(
+        centers::AbstractVector{T},
+        dmax::AbstractVector,
+        kernel::Function,
+        queries::AbstractVector{T},
+        normalize!::Function=identity) where T
     [normalize!(transform(centers, dmax, kernel, q)) for q in queries]
 end
 
@@ -51,5 +58,7 @@ function softmax!(vec::AbstractVector)
 
     vec
 end
+
+include("nearestcentroid.jl")
 
 end

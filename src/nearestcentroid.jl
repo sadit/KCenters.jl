@@ -1,10 +1,12 @@
+# This file is a part of KCenters.jl
+# License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 # based on Rocchio implementation (rocchio.jl) of https://github.com/sadit/TextSearch.jl
 
 using SimilaritySearch
 using LinearAlgebra
 using StatsBase
 import StatsBase: fit, predict
-export NearestCentroid, fit, predict
+export NearestCentroid, fit, predict, transform
 
 """
 A simple nearest centroid classifier with support for kernel functions
@@ -56,7 +58,16 @@ function _labelmap(codes)
     _lists
 end
 
-function fit(::Type{NearestCentroid}, dist::Function, input_clusters::NamedTuple, train_X::AbstractVector, train_y::AbstractVector{_Integer}, centroid::Function=mean; split_entropy=0.3, verbose=false) where _Integer<:Integer
+function fit(::Type{NearestCentroid},
+        dist::Function, input_clusters::NamedTuple,
+        train_X::AbstractVector,
+        train_y::AbstractVector{_Integer},
+        centroid::Function=mean;
+        split_entropy=0.3,
+        minimum_elements_per_centroid=1,
+        verbose=false
+    ) where _Integer<:Integer
+    
     _lists = _labelmap(input_clusters.codes)
     centroids = eltype(train_X)[] # clusters
     classes = Int[] # class mapping between clusters and classes
@@ -64,26 +75,33 @@ function fit(::Type{NearestCentroid}, dist::Function, input_clusters::NamedTuple
     m = length(input_clusters.centroids)
     nclasses = length(unique(train_y))
     
-    _ent2(f, n) = (f == 0) ? 0.0 : (f / n * log(n / f))
+    _ent(f, n) = (f == 0) ? 0.0 : (f / n * log(n / f))
     for i in 1:m
         lst = get(_lists, i, nothing)
         lst === nothing && continue
         freqs = counts(train_y[lst], 1:nclasses)
-        labels = findall(f -> f > 0, freqs)
+        labels = findall(f -> f >= minimum_elements_per_centroid, freqs)
+        if length(labels) == 0
+            verbose && println(stderr, "*** center $i: ignoring all elements because minimum-frequency restrictions were not met, freq >= $minimum_elements_per_centroid, freqs: $freqs")
+            continue
+        else
+            verbose && println(stderr, "*** center $i: selecting labels $labels (freq > $minimum_elements_per_centroid) [from $freqs]")
+        end
         e = Float64(length(labels))
         if e == 1.0
+            freqs_ = freqs
             e = 0.0
         else
-            n = sum(freqs)
-            invlognclasses = 1 / log(length(labels))
-            e = sum(_ent2(f, n) for f in freqs) * invlognclasses
+            freqs_ = freqs[labels]
+            n = sum(freqs_)
+            e = sum(_ent(f, n) for f in freqs_) / log(length(labels))
+            verbose && println(stderr, "** centroid: $i, normalized-entropy: $e, ", 
+                collect(zip(labels, freqs_)))
         end
 
-        verbose && println(stderr, "** centroid: $i, normalized-entropy: $e, ", freqs)
         if e > split_entropy
-            labels = findall(f -> f > 0, freqs)
             L = train_y[lst]
-            verbose && println(stderr, "centroid $i, labels=$labels, freqs: $freqs")
+
             for (j, l) in enumerate(labels)
                 LL = lst[L .== l]
                 c = centroid(train_X[LL])
@@ -173,12 +191,22 @@ function predict(nc::NearestCentroid{T}, kernel::Function, X::AbstractVector{T},
         c = counts([nc.class_map[p.objID] for p in res], 1:nc.nclasses)
         ypred[j] = findmax(c)[end]
     end
-    
+
     ypred
 end
 
 function predict(nc::NearestCentroid{T}, kernel::Function, x::T) where T
     predict(nc, kernel, [x])[1]
+end
+
+"""
+    transform(nc::NearestCentroid{T}, kernel::Function, X, normalize!::Function=softmax!)
+
+Maps a collection of objects to the vector space defined by each center in `nc`; the `kernel` function is used measure the similarity between each ``u \\in X`` and each center in nc. The normalization function is applied to each vector (normalization methods needing to know the attribute's distribution can be applied on the output of `transform`)
+
+"""
+function transform(nc::NearestCentroid, kernel::Function, X, normalize!::Function=softmax!)
+    transform(nc.centers, nc.dmax, kernel, X, normalize!)
 end
 
 function eval_kernel(kernel, a, b, σ)
