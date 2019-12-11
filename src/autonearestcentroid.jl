@@ -5,10 +5,10 @@ using KCenters, MLDataUtils
 using Distributed, Random, StatsBase
 import StatsBase: fit, predict
 import Base: hash, isequal
-export search_params, random_configurations, combine_configurations, fit, predict, KNearestCentroids, KNearestCentroidsConfig
+export search_params, random_configurations, combine_configurations, fit, predict, AKNC, AKNC_Config
 import Base: hash, isequal
 
-struct KNearestCentroidsConfig
+struct AKNC_Config
     kernel::Function
     dist::Function
     centroid::Function
@@ -23,7 +23,7 @@ struct KNearestCentroidsConfig
     minimum_elements_per_centroid::Int
 end
 
-function KNearestCentroidsConfig(;
+function AKNC_Config(;
         kernel::Function=relu_kernel, # [gaussian_kernel, laplacian_kernel, sigmoid_kernel, relu_kernel]
         dist::Function=l2_distance,
         centroid::Function=mean,
@@ -37,69 +37,69 @@ function KNearestCentroidsConfig(;
         split_entropy::AbstractFloat=0.6,
         minimum_elements_per_centroid=3)
     
-    KNearestCentroidsConfig(
+    AKNC_Config(
         kernel, dist, centroid,
         k, ncenters, maxiters,
         recall, initial_clusters, split_entropy, minimum_elements_per_centroid)
 end
 
-hash(a::KNearestCentroidsConfig) = hash(repr(a))
-isequal(a::KNearestCentroidsConfig, b::KNearestCentroidsConfig) = isequal(repr(a), repr(b))
+hash(a::AKNC_Config) = hash(repr(a))
+isequal(a::AKNC_Config, b::AKNC_Config) = isequal(repr(a), repr(b))
 
-mutable struct KNearestCentroids{T}
-    nc::NearestCentroid{T}
+mutable struct AKNC{T}
+    nc::KNC{T}
     kernel::Function
-    config::KNearestCentroidsConfig
+    config::AKNC_Config
 end
 
 """
-    fit(::Type{KNearestCentroids}, config::KNearestCentroidsConfig, X, y; verbose=true)
-    fit(config::KNearestCentroidsConfig, X, y; verbose=true)
+    fit(::Type{AKNC}, config::AKNC_Config, X, y; verbose=true)
+    fit(config::AKNC_Config, X, y; verbose=true)
 
-Creates a new `KNearestCentroids` model using the given configuration and the dataset `X` and `y`
+Creates a new `AKNC` model using the given configuration and the dataset `X` and `y`
 """
-function fit(::Type{KNearestCentroids}, config::KNearestCentroidsConfig, X, y; verbose=true)    
+function fit(::Type{AKNC}, config::AKNC_Config, X, y; verbose=true)    
     if config.ncenters == 0
         C = kcenters(config.dist, X, y, config.centroid)
-        cls = fit(NearestCentroid, C)
+        cls = fit(KNC, C)
     else
         C = kcenters(config.dist, X, config.ncenters, config.centroid, initial=config.initial_clusters, recall=config.recall, verbose=verbose, maxiters=config.maxiters)
         cls = fit(
-            NearestCentroid, cosine_distance, C, X, y,
+            KNC, cosine_distance, C, X, y,
             config.centroid,
             split_entropy=config.split_entropy,
             minimum_elements_per_centroid=config.minimum_elements_per_centroid,
             verbose=verbose)
     end
 
-    KNearestCentroids(cls, config.kernel(config.dist), config)
+    AKNC(cls, config.kernel(config.dist), config)
 end
 
-fit(config::KNearestCentroidsConfig, X, y; verbose=true) = fit(KNearestCentroids, config, X, y; verbose=verbose)
+fit(config::AKNC_Config, X, y; verbose=true) = fit(AKNC, config, X, y; verbose=verbose)
 
 """
-    predict(model::KNearestCentroids, X)
+    predict(model::AKNC, X)
 
 Predicts the label of each item in `X` using `model`
 """
-function predict(model::KNearestCentroids, X)
+function predict(model::AKNC, X)
     ypred = predict(model.nc, model.kernel, X, model.config.k)
 end
 
 """
-    evaluate_model(config::KNearestCentroidsConfig, train_X, train_y, test_X, test_y; verbose=true)
+    evaluate_model(config::AKNC_Config, train_X, train_y, test_X, test_y; verbose=true)
 
 Creates a model for `train_X` and `train_y`, defined with `config`, evaluates them with `test_X` and `test_y`.
 Returns a named tuple containing the evalution scores and the computed model.
 """
-function evaluate_model(config::KNearestCentroidsConfig, train_X, train_y, test_X, test_y; verbose=true)
-    knc = fit(KNearestCentroids, config, train_X, train_y)
+function evaluate_model(config::AKNC_Config, train_X, train_y, test_X, test_y; verbose=true)
+    knc = fit(AKNC, config, train_X, train_y)
     ypred = predict(knc, test_X)
     (scores=scores(test_y, ypred), model=knc)
 end
 
 """
-    random_configurations(::Type{KNearestCentroids}, H, ssize;
+    random_configurations(::Type{AKNC}, H, ssize;
         kernel::AbstractVector=[relu_kernel], 
         dist::AbstractVector=[l2_distance],
         k::AbstractVector=[1],
@@ -112,7 +112,7 @@ end
         verbose=true
     )
 
-Creates `ssize` random configurations for KNearestCentroids (they will be stored in the `H` dictionary) using
+Creates `ssize` random configurations for AKNC (they will be stored in the `H` dictionary) using
 the search space definition of the given parameters (the following parameters must be given as vectors of possible choices)
 
 - `kernel` a kernel function [gaussian_kernel, laplacian_kernel, sigmoid_kernel, relu_kernel, direct_kernel], see `src/kernels.jl`
@@ -127,7 +127,7 @@ the search space definition of the given parameters (the following parameters mu
 - `verbose` controls the verbosity of the output
 
 """
-function random_configurations(::Type{KNearestCentroids}, H, ssize;
+function random_configurations(::Type{AKNC}, H, ssize;
         kernel::AbstractVector=[relu_kernel], # [gaussian_kernel, laplacian_kernel, sigmoid_kernel, relu_kernel]
         dist::AbstractVector=[l2_distance],
         k::AbstractVector=[1],
@@ -142,7 +142,7 @@ function random_configurations(::Type{KNearestCentroids}, H, ssize;
 
     _rand_list(lst) = length(lst) == 0 ? [] : rand(lst)
 
-    H = H === nothing ? Dict{KNearestCentroidsConfig,Float64}() : H
+    H = H === nothing ? Dict{AKNC_Config,Float64}() : H
     iter = 0
     for i in 1:ssize
         iter += 1
@@ -161,7 +161,7 @@ function random_configurations(::Type{KNearestCentroids}, H, ssize;
             k_ = rand(k)
         end
 
-        config = KNearestCentroidsConfig(
+        config = AKNC_Config(
             kernel = rand(kernel),
             dist = rand(dist),
             k = k_,
@@ -180,18 +180,18 @@ function random_configurations(::Type{KNearestCentroids}, H, ssize;
 end
 
 """
-    combine_configurations(config_list::AbstractVector{KNearestCentroidsConfig}, ssize, H)
+    combine_configurations(config_list::AbstractVector{AKNC_Config}, ssize, H)
 
 Creates `ssize` individuals using a combination of the given `config_list` (they will be stored in the `H` dictionary)
 """
-function combine_configurations(config_list::AbstractVector{KNearestCentroidsConfig}, ssize, H)
+function combine_configurations(config_list::AbstractVector{AKNC_Config}, ssize, H)
     function _sel()
         rand(config_list)
     end
 
     a = _sel()
     for i in 1:ssize
-        config = KNearestCentroidsConfig(
+        config = AKNC_Config(
             kernel = _sel().kernel,
             dist = _sel().dist,
             k = a.k,
@@ -210,7 +210,7 @@ function combine_configurations(config_list::AbstractVector{KNearestCentroidsCon
 end
 
 """
-    search_params(::Type{KNearestCentroids}, X, y, configurations;
+    search_params(::Type{AKNC}, X, y, configurations;
         bsize::Integer=4,
         mutation_bsize::Integer=1,
         ssize::Integer=8,
@@ -223,7 +223,7 @@ end
         config_kwargs...
     )
 
-Performs a model selection of KNearestCentroids for the given examples ``(X, y)`` using an evolutive algorithm
+Performs a model selection of AKNC for the given examples ``(X, y)`` using an evolutive algorithm
 (a variant of a genetic algorithm). Note that this function use Distributed's `@spawn` to evaluate each configuration,
 and therefore, this function can run on a distributed system transparently.
 
@@ -249,7 +249,7 @@ The hyper-parameters found in this function are have the following meanings:
 - `models` if a dictionary is given, then all models and scores are captured into `models`.
 
 """
-function search_params(::Type{KNearestCentroids}, X, y, configurations;
+function search_params(::Type{AKNC}, X, y, configurations;
         bsize::Integer=4,
         mutation_bsize::Integer=1,
         ssize::Integer=8,
@@ -264,7 +264,7 @@ function search_params(::Type{KNearestCentroids}, X, y, configurations;
     
     save_models = models isa Dict
     if configurations isa Integer
-       configurations = random_configurations(KNearestCentroids, nothing, configurations; config_kwargs...)
+       configurations = random_configurations(AKNC, nothing, configurations; config_kwargs...)
     end
 
     n = length(y)
@@ -288,7 +288,7 @@ function search_params(::Type{KNearestCentroids}, X, y, configurations;
     iter = 0
     while iter <= search_maxiters
         iter += 1
-        C = KNearestCentroidsConfig[]
+        C = AKNC_Config[]
         S = []
 
         for (config, score_) in configurations
@@ -331,9 +331,9 @@ function search_params(::Type{KNearestCentroids}, X, y, configurations;
                 println(stderr, L[1])
             end
 
-            L =  KNearestCentroidsConfig[L[i][1] for i in 1:min(bsize, length(L))]
+            L =  AKNC_Config[L[i][1] for i in 1:min(bsize, length(L))]
             if mutation_bsize > 0
-                for p in keys(random_configurations(KNearestCentroids, nothing, mutation_bsize; config_kwargs...))
+                for p in keys(random_configurations(AKNC, nothing, mutation_bsize; config_kwargs...))
                     push!(L, p)
                 end
             end

@@ -6,25 +6,25 @@ using SimilaritySearch
 using LinearAlgebra
 using StatsBase
 import StatsBase: fit, predict
-export KernelNearestCentroid, fit, predict, transform
+export KNC, NearestCentroid, fit, predict, transform
 
 """
 A simple nearest centroid classifier with support for kernel functions
 """
-mutable struct KernelNearestCentroid{T}
+mutable struct KNC{T}
     centers::Vector{T}
     dmax::Vector{Float64}
     class_map::Vector{Int}
     nclasses::Int
 end
-const NearestCentroid = KernelNearestCentroid
+const NearestCentroid = KNC
 
 """
-    fit(::Type{KernelNearestCentroid}, D::DeloneHistogram, class_map::Vector{Int}=Int[]; verbose=true)
-    fit(::Type{KernelNearestCentroid}, D::DeloneInvIndex, labels::AbstractVector; verbose=true)
-    fit(::Type{KernelNearestCentroid}, dist::Function, input_clusters::NamedTuple, train_X::AbstractVector, train_y::AbstractVector{_Integer}, centroid::Function=mean; split_entropy=0.1, verbose=false) where _Integer<:Integer
+    fit(::Type{KNC}, D::DeloneHistogram, class_map::Vector{Int}=Int[]; verbose=true)
+    fit(::Type{KNC}, D::DeloneInvIndex, labels::AbstractVector; verbose=true)
+    fit(::Type{KNC}, dist::Function, input_clusters::NamedTuple, train_X::AbstractVector, train_y::AbstractVector{_Integer}, centroid::Function=mean; split_entropy=0.1, verbose=false) where _Integer<:Integer
 
-Creates a KernelNearestCentroid classifier using the output of either `kcenters` or `kcenters` as input
+Creates a KNC classifier using the output of either `kcenters` or `kcenters` as input
 through either a `DeloneHistogram` or `DeloneInvIndex` struct.
 If `class_map` is given, then it contains the list of labels to be reported associated to centers; if they are not specified,
 then they are assigned in consecutive order for `DeloneHistogram` and as the most popular label for `DeloneInvIndex`.
@@ -32,17 +32,17 @@ then they are assigned in consecutive order for `DeloneHistogram` and as the mos
 The third form is a little bit more complex, the idea is to divide clusters whenever their label-diversity surpasses a given threshold (measured with `split_entropy`).
 This function receives a distance function `dist` and the original dataset `train_X` in addition to other mentioned arguments.
 """
-function fit(::Type{KernelNearestCentroid}, D::DeloneHistogram, class_map::Vector{Int}=Int[]; verbose=true)
+function fit(::Type{KNC}, D::DeloneHistogram, class_map::Vector{Int}=Int[]; verbose=true)
     if length(class_map) == 0
         class_map = collect(1:length(D.centers.db))
     end
 
-    KernelNearestCentroid(D.centers.db, D.dmax, class_map, length(unique(class_map)))
+    KNC(D.centers.db, D.dmax, class_map, length(unique(class_map)))
 end
 
-function fit(::Type{KernelNearestCentroid}, C::NamedTuple, class_map::Vector{Int}=Int[]; verbose=true)
+function fit(::Type{KNC}, C::NamedTuple, class_map::Vector{Int}=Int[]; verbose=true)
     D = fit(DeloneHistogram, C)
-    fit(KernelNearestCentroid, D, class_map)
+    fit(KNC, D, class_map)
 end
 
 function _labelmap(codes)
@@ -59,7 +59,7 @@ function _labelmap(codes)
     _lists
 end
 
-function fit(::Type{KernelNearestCentroid},
+function fit(::Type{KNC},
         dist::Function, input_clusters::NamedTuple,
         train_X::AbstractVector,
         train_y::AbstractVector{_Integer},
@@ -127,10 +127,10 @@ function fit(::Type{KernelNearestCentroid},
     end
 
     verbose && println(stderr, "finished with $(length(centroids)) centroids; started with $(length(input_clusters.centroids))")
-    KernelNearestCentroid(centroids, dmax, classes, nclasses)
+    KNC(centroids, dmax, classes, nclasses)
 end
 
-function fit(::Type{KernelNearestCentroid}, D::DeloneInvIndex, train_y::AbstractVector; verbose=false)
+function fit(::Type{KNC}, D::DeloneInvIndex, train_y::AbstractVector; verbose=false)
     m = length(D.lists)
     class_map = Vector{Int}(undef, m)
     nclasses = length(unique(train_y))
@@ -148,15 +148,15 @@ function fit(::Type{KernelNearestCentroid}, D::DeloneInvIndex, train_y::Abstract
         class_map[i] = pos
     end
 
-    KernelNearestCentroid(D.centers.db, D.dmax, class_map, nclasses)
+    KNC(D.centers.db, D.dmax, class_map, nclasses)
 end
 
 """
-    predict(nc::KernelNearestCentroid{T}, kernel::Function, X::AbstractVector{T}, k=1) where T
+    predict(nc::KNC{T}, kernel::Function, X::AbstractVector{T}, k=1) where T
 
 Predicts the class of `x` using the label of the `k` nearest centroid under the `kernel` function.
 """
-function predict(nc::KernelNearestCentroid{T}, kernel::Function, X::AbstractVector{T}, k=1) where T
+function predict(nc::KNC{T}, kernel::Function, X::AbstractVector{T}, k=1) where T
     res = KnnResult(k)
     C = nc.centers
     dmax = nc.dmax
@@ -176,17 +176,17 @@ function predict(nc::KernelNearestCentroid{T}, kernel::Function, X::AbstractVect
     ypred
 end
 
-function predict(nc::KernelNearestCentroid{T}, kernel::Function, x::T) where T
+function predict(nc::KNC{T}, kernel::Function, x::T) where T
     predict(nc, kernel, [x])[1]
 end
 
 """
-    transform(nc::KernelNearestCentroid{T}, kernel::Function, X, normalize!::Function=softmax!)
+    transform(nc::KNC{T}, kernel::Function, X, normalize!::Function=softmax!)
 
 Maps a collection of objects to the vector space defined by each center in `nc`; the `kernel` function is used measure the similarity between each ``u \\in X`` and each center in nc. The normalization function is applied to each vector (normalization methods needing to know the attribute's distribution can be applied on the output of `transform`)
 
 """
-function transform(nc::KernelNearestCentroid, kernel::Function, X, normalize!::Function=softmax!)
+function transform(nc::KNC, kernel::Function, X, normalize!::Function=softmax!)
     transform(nc.centers, nc.dmax, kernel, X, normalize!)
 end
 
@@ -199,6 +199,6 @@ function eval_kernel(kernel::Function, a, b, σ)
     kernel(a, b, σ)
 end
 
-function broadcastable(nc::KernelNearestCentroid)
+function broadcastable(nc::KNC)
     (nc,)
 end

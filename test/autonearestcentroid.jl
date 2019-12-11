@@ -7,14 +7,12 @@ include("loaddata.jl")
 using KCenters, SimilaritySearch, MLDataUtils
 using StatsBase
 
-
-
-@testset "KNearestCentroids" begin
+@testset "AKNC" begin
     X, ylabels = loadiris()
     le = labelenc(ylabels)
     y = label2ind.(ylabels, le)
     models = Dict()
-    best_list = search_params(KNearestCentroids, X, y, 16;
+    best_list = search_params(AKNC, X, y, 16;
         bsize=4,
         mutation_bsize=1,
         ssize=4,
