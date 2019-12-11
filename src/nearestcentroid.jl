@@ -85,7 +85,7 @@ function fit(::Type{NearestCentroid},
             verbose && println(stderr, "*** center $i: ignoring all elements because minimum-frequency restrictions were not met, freq >= $minimum_elements_per_centroid, freqs: $freqs")
             continue
         else
-            verbose && println(stderr, "*** center $i: selecting labels $labels (freq > $minimum_elements_per_centroid) [from $freqs]")
+            verbose && println(stderr, "*** center $i: selecting labels $labels (freq >= $minimum_elements_per_centroid) [from $freqs]")
         end
         e = Float64(length(labels))
         if e == 1.0
@@ -151,30 +151,10 @@ function fit(::Type{NearestCentroid}, D::DeloneInvIndex, train_y::AbstractVector
 end
 
 """
-    predict(nc::NearestCentroid{T}, kernel::Function, x::T) where T
-    predict(nc::NearestCentroid{T}, kernel::Function, X::AbstractVector{T}) where T
+    predict(nc::NearestCentroid{T}, kernel::Function, X::AbstractVector{T}, k=1) where T
 
-Predicts the class of `x` using the label of the nearest centroid under the `kernel` function
+Predicts the class of `x` using the label of the `k` nearest centroid under the `kernel` function.
 """
-function predict(nc::NearestCentroid{T}, kernel::Function, X::AbstractVector{T}, ::Type) where T
-    res = KnnResult(1)
-    C = nc.centers
-    dmax = nc.dmax
-    L = Vector{Int}(undef, length(X))
-    for j in eachindex(X)
-        empty!(res)
-        x = X[j]
-        for i in eachindex(C)
-            s = eval_kernel(kernel, x, C[i], dmax[i])
-            push!(res, i, -s)
-        end
-
-        L[j] = nc.class_map[first(res).objID]
-    end
-    
-    L
-end
-
 function predict(nc::NearestCentroid{T}, kernel::Function, X::AbstractVector{T}, k=1) where T
     res = KnnResult(k)
     C = nc.centers
@@ -209,7 +189,12 @@ function transform(nc::NearestCentroid, kernel::Function, X, normalize!::Functio
     transform(nc.centers, nc.dmax, kernel, X, normalize!)
 end
 
-function eval_kernel(kernel, a, b, σ)
+"""
+    eval_kernel(kernel::Function, a, b, σ)
+
+Evaluates a kernel function over the giver arguments (isolated to ensure that the function can be compiled)
+"""
+function eval_kernel(kernel::Function, a, b, σ)
     kernel(a, b, σ)
 end
 

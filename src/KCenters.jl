@@ -60,5 +60,5 @@ function softmax!(vec::AbstractVector)
 end
 
 include("nearestcentroid.jl")
-
+include("autonearestcentroid.jl")
 end
