@@ -93,7 +93,7 @@ Creates a model for `train_X` and `train_y`, defined with `config`, evaluates th
 Returns a named tuple containing the evalution scores and the computed model.
 """
 function evaluate_model(config::AKNC_Config, train_X, train_y, test_X, test_y; verbose=true)
-    knc = fit(AKNC, config, train_X, train_y)
+    knc = fit(AKNC, config, train_X, train_y, verbose=verbose)
     ypred = predict(knc, test_X)
     (scores=scores(test_y, ypred), model=knc)
 end
@@ -297,7 +297,7 @@ function search_params(::Type{AKNC}, X, y, configurations;
             
             for (itrain, itest) in folds
                 perf = @spawn begin
-                    p = evaluate_model(config, X[itrain], y[itrain], X[itest], y[itest])
+                    p = evaluate_model(config, X[itrain], y[itrain], X[itest], y[itest], verbose=verbose)
                     save_models ? p : (scores=p.scores, model=nothing)
                 end
                 push!(S[end], perf)
