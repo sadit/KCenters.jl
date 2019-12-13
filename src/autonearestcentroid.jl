@@ -63,7 +63,8 @@ function fit(::Type{AKNC}, config::AKNC_Config, X, y; verbose=true)
         C = kcenters(config.dist, X, y, config.centroid)
         cls = fit(KNC, C)
     else
-        C = kcenters(config.dist, X, config.ncenters, config.centroid, initial=config.initial_clusters, recall=config.recall, verbose=verbose, maxiters=config.maxiters)
+        C = kcenters(config.dist, X, config.ncenters, config.centroid,
+            initial=config.initial_clusters, recall=config.recall, verbose=verbose, maxiters=config.maxiters)
         cls = fit(
             KNC, cosine_distance, C, X, y,
             config.centroid,
