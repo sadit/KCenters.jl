@@ -131,6 +131,7 @@ the search space definition of the given parameters (the following parameters mu
 function random_configurations(::Type{AKNC}, H, ssize;
         kernel::AbstractVector=[relu_kernel], # [gaussian_kernel, laplacian_kernel, sigmoid_kernel, relu_kernel]
         dist::AbstractVector=[l2_distance],
+        centroid::AbstractVector=[mean],
         k::AbstractVector=[1],
         maxiters::AbstractVector=[1, 3, 10],
         recall::AbstractVector=[1.0],
@@ -165,6 +166,7 @@ function random_configurations(::Type{AKNC}, H, ssize;
         config = AKNC_Config(
             kernel = rand(kernel),
             dist = rand(dist),
+            centroid = rand(centroid),
             k = k_,
             ncenters = ncenters_,
             maxiters = maxiters_,
@@ -195,6 +197,7 @@ function combine_configurations(config_list::AbstractVector{AKNC_Config}, ssize,
         config = AKNC_Config(
             kernel = _sel().kernel,
             dist = _sel().dist,
+            centroid = _sel().centroid,
             k = a.k,
             ncenters = a.ncenters,
             maxiters = a.maxiters,
@@ -346,3 +349,4 @@ function search_params(::Type{AKNC}, X, y, configurations;
 
     sort!(collect(configurations), by=x->x[2], rev=true)
 end
+
