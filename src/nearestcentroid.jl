@@ -75,12 +75,14 @@ function fit(::Type{KNC},
     dmax = Float64[]
     m = length(input_clusters.centroids)
     nclasses = length(unique(train_y))
-    
+
     _ent(f, n) = (f == 0) ? 0.0 : (f / n * log(n / f))
+    
     for i in 1:m
         lst = get(_lists, i, nothing)
         lst === nothing && continue
-        freqs = counts(train_y[lst], 1:nclasses)
+        ylst = @view train_y[lst]
+        freqs = counts(ylst, 1:nclasses)
         labels = findall(f -> f >= minimum_elements_per_centroid, freqs)
         if length(labels) == 0
             verbose && println(stderr, "*** center $i: ignoring all elements because minimum-frequency restrictions were not met, freq >= $minimum_elements_per_centroid, freqs: $freqs")
@@ -88,8 +90,8 @@ function fit(::Type{KNC},
         else
             verbose && println(stderr, "*** center $i: selecting labels $labels (freq >= $minimum_elements_per_centroid) [from $freqs]")
         end
-        e = Float64(length(labels))
-        if e == 1.0
+
+        if length(labels) == 1
             freqs_ = freqs
             e = 0.0
         else
@@ -101,16 +103,16 @@ function fit(::Type{KNC},
         end
 
         if e > split_entropy
-            L = train_y[lst]
-
-            for (j, l) in enumerate(labels)
-                LL = lst[L .== l]
-                c = centroid(train_X[LL])
+            X = @view train_X[lst]
+            invindex = labelmap(ylst)
+            for l in labels
+                XX = view(X, invindex[l])
+                c = centroid(XX)
                 push!(centroids, c)
                 push!(classes, l)
                 d = 0.0
-                for objID in LL
-                    d = max(d, dist(train_X[objID], c))
+                for u in XX
+                    d = max(d, dist(u, c))
                 end
                 push!(dmax, d)
             end

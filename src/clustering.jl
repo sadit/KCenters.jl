@@ -88,16 +88,14 @@ Computes a centroid per region (each region is defined by the set of items havin
 The output is compatible with `kcenters` function when `eltype(y)` is Int
 """
 function kcenters(dist::Function, X::AbstractVector{T}, y::AbstractVector{I}, centroid::Function=mean) where {T,I<:Integer}
-    labels = sort!(unique(y))
-    m = length(labels)
+    invindex = labelmap(y)
+    m = length(invindex)
     centers = Vector{T}(undef, m)
-    populations = Vector{Int}(undef, m)
-
-    for i in eachindex(labels)
-        label = labels[i]
-        L = X[label .== y]
-        centers[i] = centroid(L)
-        populations[i] = length(L)
+    populations = zeros(Int, m)
+    for (i, L) in sort!(collect(invindex))
+        C = @view X[L]
+        centers[i] = centroid(C)
+        populations[i] = length(C)
     end
 
     distances = [dist(X[i], centers[y[i]]) for i in eachindex(X)]
