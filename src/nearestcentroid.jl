@@ -45,20 +45,6 @@ function fit(::Type{KNC}, C::NamedTuple, class_map::Vector{Int}=Int[]; verbose=t
     fit(KNC, D, class_map)
 end
 
-function _labelmap(codes)
-    _lists = Dict{Int,Vector{Int}}()
-    for (pos, code) in enumerate(codes)
-        lst = get(_lists, code, nothing)
-        if lst === nothing
-            _lists[code] = [pos]
-        else
-            push!(lst, pos)
-        end
-    end
-
-    _lists
-end
-
 function fit(::Type{KNC},
         dist::Function, input_clusters::NamedTuple,
         train_X::AbstractVector,
@@ -69,7 +55,7 @@ function fit(::Type{KNC},
         verbose=false
     ) where _Integer<:Integer
     
-    _lists = _labelmap(input_clusters.codes)
+    _lists = labelmap(input_clusters.codes)
     centroids = eltype(train_X)[] # clusters
     classes = Int[] # class mapping between clusters and classes
     dmax = Float64[]
@@ -81,7 +67,8 @@ function fit(::Type{KNC},
     for i in 1:m
         lst = get(_lists, i, nothing)
         lst === nothing && continue
-        ylst = @view train_y[lst]
+        #ylst = @view train_y[lst]
+        ylst = train_y[lst]
         freqs = counts(ylst, 1:nclasses)
         labels = findall(f -> f >= minimum_elements_per_centroid, freqs)
         if length(labels) == 0
@@ -103,10 +90,11 @@ function fit(::Type{KNC},
         end
 
         if e > split_entropy
-            X = @view train_X[lst]
+            # X = @view train_X[lst]
+            X = train_X[lst]
             invindex = labelmap(ylst)
             for l in labels
-                XX = view(X, invindex[l])
+                XX = X[invindex[l]]
                 c = centroid(XX)
                 push!(centroids, c)
                 push!(classes, l)
