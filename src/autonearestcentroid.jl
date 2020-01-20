@@ -5,7 +5,7 @@ using KCenters, MLDataUtils
 using Distributed, Random, StatsBase
 import StatsBase: fit, predict
 import Base: hash, isequal
-export search_params, random_configurations, combine_configurations, fit, predict, AKNC, AKNC_Config
+export search_params, random_configurations, combine_configurations, fit, after_load, predict, AKNC, AKNC_Config
 import Base: hash, isequal
 
 struct AKNC_Config
@@ -85,6 +85,15 @@ Predicts the label of each item in `X` using `model`
 """
 function predict(model::AKNC, X)
     ypred = predict(model.nc, model.kernel, X, model.config.k)
+end
+
+"""
+    after_load(model::AKNC)
+
+Fixes the `AKNC` after loading it from an stored image. In particular, it creates a function composition among distance function and a non-linear function with specific properties. 
+"""
+function after_load(model::AKNC)
+    model.kernel = model.config.kernel(config.dist)
 end
 
 """
