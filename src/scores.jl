@@ -153,7 +153,8 @@ function precision_recall(gold, predicted)
         fp_ += fp
         precision = tp / (tp + fp)
 
-        if precision <= eps(typeof(precision))
+        if isnan(precision)
+            precision = 0.0
             @info "precision is zero for label '$label'; #classes=$(length(labels)) "
         end
         M[label] = (precision=precision, recall=tp / (tp + fn), population=sum(lgold) |> Int)
