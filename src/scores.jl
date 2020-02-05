@@ -80,19 +80,24 @@ function f1_score(gold, predict; weight=:macro)::Float64
 end
 
 """
-    scores(gold, predicted)
+    scores(gold, predicted,  le=nothing)
 
 Computes several scores for the given gold-standard and predictions, namely: 
-precision, recall, and f1 scores, for global and per-class granularity
+precision, recall, and f1 scores, for global and per-class granularity. If le is given,
+the internal numeric labels are translated using the MLLabelUtils interface.
 
 """
-function scores(gold, predicted)
+function scores(gold, predicted, le=nothing)
     class_f1 = Dict()
 	class_precision = Dict()
 	class_recall = Dict()
 
     P = precision_recall(gold, predicted)
+	
     for (k, v) in P.per_class
+		if le !== nothing
+			k = ind2label(k, le)
+		end
         class_f1[k] = f1_(v.precision, v.recall)
 		class_precision[k] = v.precision
 		class_recall[k] = v.recall
