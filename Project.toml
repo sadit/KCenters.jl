@@ -1,7 +1,7 @@
 name = "KCenters"
 uuid = "5d8de97f-65f8-4dd6-a15b-0f89c36a43ce"
 authors = ["Eric S. Tellez <donsadit@gmail.com>"]
-version = "0.1.10"
+version = "0.1.11"
 
 [deps]
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
