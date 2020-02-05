@@ -29,7 +29,7 @@ end
 @testset "Clustering with KCenters" begin
     cfft = KCenters.kcenters(l2_distance, X, 16)
     cdnet = KCenters.kcenters(l2_distance, X, 16, initial=:dnet)
-    crand = KCenters.kcenters(l2_distance, X, 16, initial=:random)
+    crand = KCenters.kcenters(l2_distance, X, 16, initial=:rand)
     @show inertia(cfft.distances)
     @show inertia(cdnet.distances)
     @show inertia(crand.distances)
@@ -39,7 +39,7 @@ end
 @testset "Clustering with KCenters with an approximate index" begin
     cfft = KCenters.kcenters(l2_distance, X, 16, recall=0.99)
     cdnet = KCenters.kcenters(l2_distance, X, 16, initial=:dnet, recall=0.99)
-    crand = KCenters.kcenters(l2_distance, X, 16, initial=:random, recall=0.99)
+    crand = KCenters.kcenters(l2_distance, X, 16, initial=:rand, recall=0.99)
     @show inertia(cfft.distances)
     @show inertia(cdnet.distances)
     @show inertia(crand.distances)

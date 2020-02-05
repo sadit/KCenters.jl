@@ -75,7 +75,7 @@ function dnet(dist::Function, X::AbstractVector{T}, numcenters::Int; verbose=fal
        verbose && println(stderr, "dnet -- selected-center: $(length(irefs)), id: $c, dmax: $(dmax[end])")
     end
     
-    dnet(callback, dist, X, ceil(Int, n / numcenters))
+    dnet(callback, dist, X, floor(Int, n / numcenters))
     #@info [length(p) for p in seq]
     #@info sort(irefs), sum([length(p) for p in seq]), length(irefs)
     (irefs=irefs, seq=seq, dmax=dmax)
@@ -104,22 +104,68 @@ end
 
 """
     kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Function=mean; initial=:fft, maxiters=0, tol=0.001, recall=1.0) where T
-    kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, centroid::Function=mean; maxiters=0, tol=0.001, recall=1.0) where T
+    kcenters(dist::Function, X::AbstractVector{T}, C::AbstractzVector{T}, centroid::Function=mean; maxiters=30, tol=0.001, recall=1.0) where T
 
 Performs a kcenters clustering of `X` using `dist` as distance function and `centroid` to compute centroid objects.
 It is based on the k-means algorithm yet using different algorithms as initial clusters.
+    - `:fft` the _farthest first traversal_ selects a set of farthest points among them to serve as cluster seeds.
+    - `:dnet` the _density net_ algorithm selects a set of points following the same distribution of the datasets; in contrast with a random selection, `:dnet` ensures that the selected points are not ``\\lfloor n/k \\rfloor`` nearest neighbors.
+    - `:sfft` the `:fft` over a ``k + \\log n`` random sample
+    - `:sdnet` the `:dnet` over a ``k + \\log n`` random sample
+    - `:rand` selects the set of random points along the dataset.
+
 If recall is 1.0 then an exhaustive search is made to find associations of each item to its nearest cluster; if ``0 < recall < 0`` then an approximate index
 (`SearchGraph` from `SimilaritySearch.jl`) will be used for the same purpose; the `recall` controls the expected search quality (trade with search time).
 """
-function kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Function=mean; initial=:fft, maxiters=0, tol=0.001, recall=1.0, verbose=false) where T
+function kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Function=mean; initial=:fft, maxiters=10, tol=0.001, recall=1.0, verbose=false) where T
     local err::Float64 = 0.0
+    
+    if initial == :fft
+        m = 0
+        irefs = enet(dist, X, k+m).irefs
+        if m > 0
+            irefs = irefs[1+m:end]
+        end
+        initial = X[irefs]
+    elseif initial == :dnet
+        irefs = dnet(dist, X, k).irefs
+        resize!(irefs, k)
+        initial = X[irefs]
+    elseif initial == :sfft
+        n = length(X)
+        m = min(n, ceil(Int, sqrt(n)) + k)
+        X_ = X[unique(rand(1:n, m))]
+        C = enet(dist, X_, k, verbose=verbose)
+        initial = X_[C.irefs]
+    elseif initial == :sdnet
+        n = length(X)
+        m = min(n, ceil(Int, sqrt(n)) + k)
+        X_ = X[unique(rand(1:n, m))]
+        irefs = dnet(dist, X_, k, verbose=verbose).irefs
+        resize!(irefs, k)
+        initial = X_[irefs]
+    elseif initial == :fftdensity
+        n = length(X)
+        m = min(n, ceil(Int, log(n)) + 2 * k)
+        E = enet(dist, X, m)
 
-    if initial in (:fft, :minmax, :enet)
-        initial = X[enet(dist, X, k).irefs]
-    elseif initial in (:dnet, :knnballs)
-        initial = X[dnet(dist, X, k).irefs]
-    elseif initial in (:rand, :random)
+        C = Dict{Int, Int}()
+        # D = Dict{Int, Float64}()
+        for p in E.seq
+            i = first(p).objID
+            C[i] = get(C, i, 0) + 1
+            d = last(p).dist
+            # D[i] = max(get(D, i, 0.0), d)
+        end
+        
+        irefs = [s[1] for s in sort!(collect(C), by=p->p[2], rev=true)[1:2*k]]
+        XX = X[irefs]
+        C = enet(dist, XX, k)
+        initial = XX[C.irefs]
+    elseif initial == :rand
         initial = rand(X, k)
+    elseif initial isa Symbol
+        error("Unknown kind of initial value $initial")
     else
         initial = initial::AbstractVector{T}
     end
@@ -127,12 +173,12 @@ function kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Fu
     kcenters(dist, X, initial, centroid, maxiters=maxiters, tol=tol, recall=recall, verbose=verbose)
 end
 
-function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, centroid::Function=mean; maxiters=0, tol=0.001, recall=1.0, verbose=true) where T
+function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, centroid::Function=mean; maxiters=-1, tol=0.001, recall=1.0, verbose=true) where T
     # Lloyd's algoritm (kmeans)
     n = length(X)
     numcenters = length(C)
-    if maxiters == 0
-        maxiters = ceil(Int, sqrt(n))
+    if maxiters == -1
+        maxiters = ceil(Int, log2(n))
     end
 
     function create_index(CC)
@@ -145,10 +191,10 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
 
     codes = Vector{Int}(undef, n)
     distances = zeros(Float64, n)
-    err = [typemax(Float64), associate_centroids_and_compute_error(dist, create_index(C), X, codes, distances)]
+    err = [typemax(Float64), associate_centroids_and_compute_error!(dist, X, create_index(C), codes, distances)]
     iter = 0
 
-    while iter < maxiters && abs(err[end-1] - err[end]) >= tol
+    while iter < maxiters && err[end-1] - err[end] >= tol
         iter += 1
         verbose && println(stderr, "*** starting iteration: $iter; err: $err ***")
         clusters = [Int[] for i in 1:numcenters]
@@ -168,7 +214,7 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
         end
         
         verbose && println(stderr, "*** computing $(numcenters) nearest references ***")
-        s = associate_centroids_and_compute_error(dist, create_index(C), X, codes, distances)
+        s = associate_centroids_and_compute_error!(dist, X, create_index(C), codes, distances)
 
         push!(err, s)
         @assert !isnan(err[end]) "ERROR invalid score $err"
@@ -179,17 +225,20 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
     (centroids=C, codes=codes, distances=distances, err=err)
 end
 
-function associate_centroids_and_compute_error(dist, Cindex::Index, X, codes, distances)
+function associate_centroids_and_compute_error!(dist, X, index::Index, codes, distances, counter=nothing)
     res = KnnResult(1)
-    for objID in 1:length(X)
+    for objID in eachindex(X)
         empty!(res)
-        res = search(Cindex, dist, X[objID], res)
-        codes[objID] = first(res).objID
+        res = search(index, dist, X[objID], res)
+        refID = first(res).objID
+        codes[objID] = refID
         distances[objID] = last(res).dist
+        if counter !== nothing
+            counter[refID] = get(counter, refID, 0) + 1
+        end
     end
 
-    sum(d^2 for d in distances) / length(distances)
-    #mean(distances)
+    mean(distances)
 end
 
 """
@@ -199,13 +248,13 @@ Returns the named tuple `(codes=codes, distances=distances, err=s)` where codes 
 index for each item in `X` under the context of the `dist` distance function. `C` is the set of centroids and
 `X` the dataset of objects. `C` also can be provided as a SimilaritySearch's Index.
 """
-function associate_centroids(dist, C, X)
+function associate_centroids(dist, X, C)
     n = length(X)
     codes = Vector{Int}(undef, n)
     distances = Vector{Float64}(undef, n)
     if C isa AbstractVector
         C = fit(Sequential, C)
     end
-    s = associate_centroids_and_compute_error(dist, C, X, codes, distances)
+    s = associate_centroids_and_compute_error!(dist, X, C, codes, distances)
     (codes=codes, distances=distances, err=s)
 end
