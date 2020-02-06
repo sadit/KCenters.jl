@@ -12,27 +12,25 @@ X, y = loadiris()
 @testset "Clustering with enet" begin
     for i in 2:5
         p = enet(l2_distance, X, i^2)
-        d = [first(p).dist for p in p.seq]
-        @info inertia(d)
-        @test maximum(d) <= p.dmax
+        D = [first(p).dist for p in p.seq]
+        @test maximum(D) <= p.dmax
     end
 end
 
 @testset "Clustering with dnet" begin
     for i in 2:5
         res = dnet(l2_distance, X, i^2)
-        @info inertia([first(p).dist for p in res.seq])
+        @info mean([first(p).dist for p in res.seq])
     end
 end
-
 
 @testset "Clustering with KCenters" begin
     cfft = KCenters.kcenters(l2_distance, X, 16)
     cdnet = KCenters.kcenters(l2_distance, X, 16, initial=:dnet)
     crand = KCenters.kcenters(l2_distance, X, 16, initial=:rand)
-    @show inertia(cfft.distances)
-    @show inertia(cdnet.distances)
-    @show inertia(crand.distances)
+    @show mean(cfft.distances)
+    @show mean(cdnet.distances)
+    @show mean(crand.distances)
 end
 
 
@@ -40,7 +38,7 @@ end
     cfft = KCenters.kcenters(l2_distance, X, 16, recall=0.99)
     cdnet = KCenters.kcenters(l2_distance, X, 16, initial=:dnet, recall=0.99)
     crand = KCenters.kcenters(l2_distance, X, 16, initial=:rand, recall=0.99)
-    @show inertia(cfft.distances)
-    @show inertia(cdnet.distances)
-    @show inertia(crand.distances)
+    @show mean(cfft.distances)
+    @show mean(cdnet.distances)
+    @show mean(crand.distances)
 end

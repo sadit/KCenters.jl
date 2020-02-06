@@ -258,3 +258,4 @@ function associate_centroids(dist, X, C)
     s = associate_centroids_and_compute_error!(dist, X, C, codes, distances)
     (codes=codes, distances=distances, err=s)
 end
+

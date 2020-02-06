@@ -238,22 +238,3 @@ function isqerror(X::AbstractVector{F}, Y::AbstractVector{F}) where {F <: Abstra
     -d
 end
 
-## clustering scores
-export sum_intracluster_squared_distances, sum_intracluster_distances, mean_intracluster_squared_distances, mean_intracluster_distances, inertia
-
-function sum_intracluster_squared_distances(nndist::AbstractVector)
-    s = 0.0
-    for d in nndist
-        s += d^2
-    end
-
-    s
-end
-
-function sum_intracluster_distances(nndist::AbstractVector)
-    sum(nndist)
-end
-
-mean_intracluster_squared_distances(nndist) = sum_intracluster_squared_distances(nndist) / length(nndist)
-mean_intracluster_distances(nndist) = sum_intracluster_distances(nndist) / length(nndist)
-inertia(nndist) = sum_intracluster_squared_distances(nndist)
