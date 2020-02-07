@@ -91,15 +91,15 @@ function kcenters(dist::Function, X::AbstractVector{T}, y::AbstractVector{I}, ce
     invindex = labelmap(y)
     m = length(invindex)
     centers = Vector{T}(undef, m)
-    populations = zeros(Int, m)
+    counts = zeros(Int, m)
     for (i, L) in sort!(collect(invindex))
         C = @view X[L]
         centers[i] = centroid(C)
-        populations[i] = length(C)
+        counts[i] = length(C)
     end
 
     distances = [dist(X[i], centers[y[i]]) for i in eachindex(X)]
-    (centroids=centers, codes=y, distances=distances, err=sum(distances))
+    (centroids=centers, counts=counts, codes=y, distances=distances, err=sum(distances))
 end
 
 """
@@ -189,9 +189,10 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
         end
     end
 
+    counts = zeros(Int, numcenters)
     codes = Vector{Int}(undef, n)
     distances = zeros(Float64, n)
-    err = [typemax(Float64), associate_centroids_and_compute_error!(dist, X, create_index(C), codes, distances)]
+    err = [typemax(Float64), associate_centroids_and_compute_error!(dist, X, create_index(C), codes, distances, counts)]
     iter = 0
 
     while iter < maxiters && err[end-1] - err[end] >= tol
@@ -214,7 +215,7 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
         end
         
         verbose && println(stderr, "*** computing $(numcenters) nearest references ***")
-        s = associate_centroids_and_compute_error!(dist, X, create_index(C), codes, distances)
+        s = associate_centroids_and_compute_error!(dist, X, create_index(C), codes, distances, counts)
 
         push!(err, s)
         @assert !isnan(err[end]) "ERROR invalid score $err"
@@ -222,10 +223,10 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
     end
     
     verbose && println(stderr, "*** finished computation of $(numcenters) references, err: $err ***")
-    (centroids=C, codes=codes, distances=distances, err=err)
+    (centroids=C, counts=counts, codes=codes, distances=distances, err=err)
 end
 
-function associate_centroids_and_compute_error!(dist, X, index::Index, codes, distances, counter=nothing)
+function associate_centroids_and_compute_error!(dist, X, index::Index, codes, distances, counters)
     res = KnnResult(1)
     for objID in eachindex(X)
         empty!(res)
@@ -233,29 +234,28 @@ function associate_centroids_and_compute_error!(dist, X, index::Index, codes, di
         refID = first(res).objID
         codes[objID] = refID
         distances[objID] = last(res).dist
-        if counter !== nothing
-            counter[refID] = get(counter, refID, 0) + 1
-        end
+        counters[refID] += 1
     end
 
     mean(distances)
 end
 
 """
-    associate_centroids(dist, C, X)
+    associate_centroids(dist, X, centers)
 
-Returns the named tuple `(codes=codes, distances=distances, err=s)` where codes contains the nearest centroid
+Returns the named tuple `(codes=codes, counts=counts, distances=distances, err=s)` where codes contains the nearest centroid
 index for each item in `X` under the context of the `dist` distance function. `C` is the set of centroids and
 `X` the dataset of objects. `C` also can be provided as a SimilaritySearch's Index.
 """
-function associate_centroids(dist, X, C)
+function associate_centroids(dist, X, centers)
     n = length(X)
+    counts = zeros(Int, length(centers))
     codes = Vector{Int}(undef, n)
     distances = Vector{Float64}(undef, n)
-    if C isa AbstractVector
-        C = fit(Sequential, C)
+    if centers isa AbstractVector
+        centers = fit(Sequential, centers)
     end
-    s = associate_centroids_and_compute_error!(dist, X, C, codes, distances)
+    s = associate_centroids_and_compute_error!(dist, X, centers, codes, distances, counts)
     (codes=codes, distances=distances, err=s)
 end
 

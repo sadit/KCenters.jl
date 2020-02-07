@@ -17,6 +17,7 @@ mutable struct KNC{T}
     class_map::Vector{Int}
     nclasses::Int
 end
+
 const NearestCentroid = KNC
 
 """
@@ -90,7 +91,6 @@ function fit(::Type{KNC},
         end
 
         if e > split_entropy
-            # X = @view train_X[lst]
             X = train_X[lst]
             invindex = labelmap(ylst)
             for l in labels
