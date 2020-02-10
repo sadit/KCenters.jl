@@ -13,6 +13,7 @@ include("clustering.jl")
 include("invindex.jl")
 include("kernels.jl")
 
+
 export transform, softmax!
 """
     transform(centers::AbstractVector{T}, dmax::AbstractVector, kernel::Function, q::T) where T
@@ -61,7 +62,7 @@ end
 
 include("nearestcentroid.jl")
 include("autonearestcentroid.jl")
-
+include("multinknc.jl")
 
 
 """

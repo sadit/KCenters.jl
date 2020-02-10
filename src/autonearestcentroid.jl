@@ -79,14 +79,15 @@ end
 fit(config::AKNC_Config, X, y; verbose=true) = fit(AKNC, config, X, y; verbose=verbose)
 
 """
-    predict(model::AKNC, X)
+    predict(model::AKNC, X, k::Integer=0)
 
-Predicts the label of each item in `X` using `model`
+Predicts the label of each item in `X` using `model`; k == 0 means for using the stored `k` in `config`
 """
-function predict(model::AKNC, X)
-    ypred = predict(model.nc, model.kernel, X, model.config.k)
-end
 
+function predict(model::AKNC, X, k::Integer=0)
+    k = k == 0 ? model.config.k : k
+    ypred = predict(model.nc, model.kernel, X, k)
+end
 """
     after_load(model::AKNC)
 

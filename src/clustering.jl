@@ -147,6 +147,7 @@ function kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Fu
     elseif initial == :fftdensity
         n = length(X)
         m = min(n, ceil(Int, log(n)) + 2 * k)
+
         E = enet(dist, X, m)
 
         C = Dict{Int, Int}()

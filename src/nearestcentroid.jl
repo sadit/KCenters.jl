@@ -20,6 +20,7 @@ end
 
 const NearestCentroid = KNC
 
+
 """
     fit(::Type{KNC}, D::DeloneHistogram, class_map::Vector{Int}=Int[]; verbose=true)
     fit(::Type{KNC}, D::DeloneInvIndex, labels::AbstractVector; verbose=true)
@@ -183,3 +184,4 @@ end
 function broadcastable(nc::KNC)
     (nc,)
 end
+
