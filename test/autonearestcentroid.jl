@@ -6,6 +6,8 @@ using Test
 using KCenters, SimilaritySearch, MLDataUtils
 using StatsBase, JSON
 
+JSON.lower(f::Function) = string(f)
+
 function generate_data()
     X = [rand(2) for i in 1:1000]
     y = [round(Int, 1 + 2 * prod(x)) for x in X]
@@ -55,6 +57,12 @@ end
         @test sb.accuracy > 0.85
         @info "===== scores for $k: $(JSON.json(sb))"
     end
+
+    config_list = optimize!(B, X_, y_, accuracy_score, kernel=[direct_kernel], dist=[l1_distance, l2_distance])
+    sc = scores(y_, predict(B, X_))
+    @test sc.accuracy > 0.85
+    @info "config: ", JSON.json(config_list[1])
+    @info "===== scores optimized! B: $(JSON.json(sc))"
 end
 
 exit(0)

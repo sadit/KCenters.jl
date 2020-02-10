@@ -8,7 +8,7 @@ import Base: hash, isequal
 export search_params, random_configurations, combine_configurations, fit, after_load, predict, AKNC, AKNC_Config
 import Base: hash, isequal
 
-struct AKNC_Config
+mutable struct AKNC_Config
     kernel::Function
     dist::Function
     centroid::Function
@@ -139,7 +139,7 @@ the search space definition of the given parameters (the following parameters mu
 
 """
 function random_configurations(::Type{AKNC}, H, ssize;
-        kernel::AbstractVector=[relu_kernel], # [gaussian_kernel, laplacian_kernel, sigmoid_kernel, relu_kernel]
+        kernel::AbstractVector=[relu_kernel, direct_kernel], # [gaussian_kernel, laplacian_kernel, sigmoid_kernel, relu_kernel]
         dist::AbstractVector=[l2_distance],
         centroid::AbstractVector=[mean],
         k::AbstractVector=[1],

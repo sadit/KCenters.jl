@@ -16,8 +16,8 @@ using KCenters
     @test f1_score([0,1,1,1,0,1], [0,1,1,1,1,1], weight=:macro) ≈ (2 * 0.5 / 1.5 + 2 * 0.8 / 1.8) / 2
 end
 
-#include("kcenters.jl")
-#include("nearestcentroid.jl")
+include("kcenters.jl")
+include("nearestcentroid.jl")
 include("autonearestcentroid.jl")
 include("invindex.jl")
 
