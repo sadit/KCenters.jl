@@ -67,6 +67,8 @@ function optimize!(model::AKNC, X, y, score::Function=recall_score; k=[1, 3, 5, 
     sort!(L, by=x->x.score, rev=true)
     c = first(L)
     model.config.k = c.k
+    model.config.kernel = c.kernel
+    model.config.dist = c.dist
     model.kernel = c.kernel_fun
     L
 end
