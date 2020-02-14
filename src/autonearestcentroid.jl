@@ -237,6 +237,7 @@ end
         tol::AbstractFloat=0.01,
         verbose=true,
         models::Union{Nothing,Dict}=nothing,
+        distributed=true,
         config_kwargs...
     )
 
@@ -257,14 +258,14 @@ The hyper-parameters found in this function are have the following meanings:
   - ``0 < folds < 1`` a holdout partition (training with ``folds \\times n`` items and validating with ``(1-folds) \\times n`` items.
   - `folds` as a positive integer determines the `k` in `kfolds` crossvalidation
   - folds as an array of 2-tuples with indexes over `X` and `y` (manually given partitions)
-- `search_maxiters` number of iterations before stop model selection.
-- `score` the score function to be optimized (a function or a symbol with a key over `scores`-function's output)
-- `tol` determines the tolerance; i.e., if the current iteration doesn't improves the previous one in at least `tol`
+- `search_maxiters`: sets the number of iterations before stop model selection.
+- `score`: the score function to be optimized (a function or a symbol with a key over `scores`-function's output)
+- `tol`: determines the tolerance; i.e., if the current iteration doesn't improves the previous one in at least `tol`
   regarding `score`, then the model selection procedure will be stopped. Set `tol` to a negative number to ignore this
   early stopping mode in favor of `search_maxiters`.
-- `verbose` indicates that you are willing to have a verbose output of several internal steps.
-- `models` if a dictionary is given, then all models and scores are captured into `models`.
-
+- `verbose`: indicates that you are willing to have a verbose output of several internal steps.
+- `models`: if a dictionary is given, then all models and scores are captured into `models`.
+- `distributed`: if it is true then the model evaluation is made with Distributed.@spawn (useful for debugging)
 """
 function search_params(::Type{AKNC}, X, y, configurations;
         bsize::Integer=4,
@@ -276,6 +277,7 @@ function search_params(::Type{AKNC}, X, y, configurations;
         tol::AbstractFloat=0.01,
         verbose=true,
         models::Union{Nothing,Dict}=nothing,
+        distributed=true,
         config_kwargs...
     )
     
@@ -313,7 +315,12 @@ function search_params(::Type{AKNC}, X, y, configurations;
             push!(S, [])
             
             for (itrain, itest) in folds
-                perf = begin #@spawn begin
+                perf = if distributed
+                    @spawn begin
+                        p = evaluate_model(config, X[itrain], y[itrain], X[itest], y[itest], verbose=verbose)
+                        save_models ? p : (scores=p.scores, model=nothing)
+                    end
+                else
                     p = evaluate_model(config, X[itrain], y[itrain], X[itest], y[itest], verbose=verbose)
                     save_models ? p : (scores=p.scores, model=nothing)
                 end
