@@ -48,25 +48,27 @@ function bagging(config::AKNC_Config, X::AbstractVector, y::AbstractVector{I}; b
 end
 
 """
-    optimize!(model::AKNC, X, y; k=[1, 3, 5, 7], kernel=[direct_kernel, relu_kernel, laplacian_kernel, gaussian_kernel])
+    optimize!(model::AKNC, X, y, score::Function=recall_score; k=[1, 3, 5, 7], kernel=[direct_kernel, relu_kernel, laplacian_kernel, gaussian_kernel], dist=[l1_distance, l2_distance, full_angle_distance], summary=[most_frequent_label, mean_label], verbose=true)
 
 Selects `k` and `kernel` to AKNC to adjust better to the given score and the dataset ``(X, y)``.
 """
-function optimize!(model::AKNC, X, y, score::Function=recall_score; k=[1, 3, 5, 7], kernel=[direct_kernel, relu_kernel, laplacian_kernel, gaussian_kernel], dist=[l1_distance, l2_distance, full_angle_distance], verbose=true)
+function optimize!(model::AKNC, X, y, score::Function=recall_score; k=[1, 3, 5, 7], kernel=[direct_kernel, relu_kernel, laplacian_kernel, gaussian_kernel], dist=[l1_distance, l2_distance, full_angle_distance], summary=[most_frequent_label, mean_label], verbose=true)
     L = []
-    for k_ in k, kernel_ in kernel, dist_ in dist
+    for k_ in k, kernel_ in kernel, dist_ in dist, summary_ in summary
         kernel_fun = kernel_(dist_)
         model.config.k = k_
+        model.config.summary = summary_
         model.kernel = kernel_fun
         ypred = predict(model, X)
         s = score(y, ypred)
-        push!(L, (score=s, k=k_, kernel=kernel_, dist=dist_, kernel_fun=kernel_fun))
+        push!(L, (score=s, k=k_, kernel=kernel_, dist=dist_, summary=summary_, kernel_fun=kernel_fun))
         verbose && println(stderr, L[end])
     end
 
     sort!(L, by=x->x.score, rev=true)
     c = first(L)
     model.config.k = c.k
+    model.config.summary = c.summary
     model.config.kernel = c.kernel
     model.config.dist = c.dist
     model.kernel = c.kernel_fun

@@ -6,7 +6,7 @@ using SimilaritySearch
 using LinearAlgebra
 using StatsBase
 import StatsBase: fit, predict
-export KNC, NearestCentroid, fit, predict, transform
+export KNC, fit, predict, transform, most_frequent_label, mean_label
 
 """
 A simple nearest centroid classifier with support for kernel functions
@@ -17,9 +17,6 @@ mutable struct KNC{T}
     class_map::Vector{Int}
     nclasses::Int
 end
-
-const NearestCentroid = KNC
-
 
 """
     fit(::Type{KNC}, D::DeloneHistogram, class_map::Vector{Int}=Int[]; verbose=true)
@@ -34,7 +31,7 @@ then they are assigned in consecutive order for `DeloneHistogram` and as the mos
 The third form is a little bit more complex, the idea is to divide clusters whenever their label-diversity surpasses a given threshold (measured with `split_entropy`).
 This function receives a distance function `dist` and the original dataset `train_X` in addition to other mentioned arguments.
 """
-function fit(::Type{KNC}, D::DeloneHistogram, class_map::Vector{Int}=Int[]; verbose=true)
+function fit(::Type{KNC}, D::DeloneHistogram, class_map::Vector{Int}, verbose=true)
     if length(class_map) == 0
         class_map = collect(1:length(D.centers.db))
     end
@@ -121,37 +118,36 @@ function fit(::Type{KNC},
     KNC(centroids, dmax, classes, nclasses)
 end
 
-function fit(::Type{KNC}, D::DeloneInvIndex, train_y::AbstractVector; verbose=false)
-    m = length(D.lists)
-    class_map = Vector{Int}(undef, m)
-    nclasses = length(unique(train_y))
-    _ent2(f, n) = f == 0 ? 0.0 : f / n * log(n / f)
+"""
+    most_frequent_label(nc::KNC, res::KnnResult)
 
-    for i in 1:m
-        lst = D.lists[i]
-        freqs = counts(train_y[lst], 1:nclasses)
-        if verbose
-            n = sum(freqs)
-            ent = sum(_ent2(f, n) for f in freqs) / log(nclasses)
-            println(stderr, "centroid: $i, normalized-entropy: $ent, ", freqs)
-        end
-        freq, pos = findmax(freqs)
-        class_map[i] = pos
-    end
-
-    KNC(D.centers.db, D.dmax, class_map, nclasses)
+Summary function that computes the label as the most frequent label among labels of the k nearest prototypes (categorical labels)
+"""
+function most_frequent_label(nc::KNC, res::KnnResult)
+    c = counts([nc.class_map[p.objID] for p in res], 1:nc.nclasses)
+    findmax(c)[end]
 end
 
 """
-    predict(nc::KNC{T}, kernel::Function, X::AbstractVector{T}, k=1) where T
+    mean_label(nc::KNC, res::KnnResult)
+
+Summary function that computes the label as the mean of the k nearest labels (ordinal classification)
+"""
+function mean_label(nc::KNC, res::KnnResult)
+    round(Int, mean([nc.class_map[p.objID] for p in res]))
+end
+
+"""
+    predict(nc::KNC{T}, kernel::Function, summary::Function, X::AbstractVector{T}, k=1) where T
 
 Predicts the class of `x` using the label of the `k` nearest centroid under the `kernel` function.
 """
-function predict(nc::KNC{T}, kernel::Function, X::AbstractVector{T}, k=1) where T
+function predict(nc::KNC{PointType}, kernel::Function, summary::Function, X::AbstractVector{PointType}, k::Integer) where PointType
     res = KnnResult(k)
     C = nc.centers
     dmax = nc.dmax
     ypred = Vector{Int}(undef, length(X))
+
     for j in eachindex(X)
         empty!(res)
         x = X[j]
@@ -160,17 +156,15 @@ function predict(nc::KNC{T}, kernel::Function, X::AbstractVector{T}, k=1) where 
             push!(res, i, -s)
         end
 
-        c = counts([nc.class_map[p.objID] for p in res], 1:nc.nclasses)
-        ypred[j] = findmax(c)[end]
+        ypred[j] = summary(nc, res)
     end
 
     ypred
 end
 
-function predict(nc::KNC{T}, kernel::Function, x::T) where T
-    predict(nc, kernel, [x])[1]
+function predict(nc::KNC{PointType}, kernel::Function, summary::Function, X::PointType, k::Integer) where PointType
+    predict(nc, kernel, summary, [x], k)[1]
 end
-
 
 """
     eval_kernel(kernel::Function, a, b, σ)

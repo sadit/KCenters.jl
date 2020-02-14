@@ -49,7 +49,6 @@ end
     @test sa.accuracy > 0.85
 
     @info "class distribution: ", countmap(y), countmap(y_)
-    @info config, score
     @info "===== scores for single classifier: $(JSON.json(sa))"
 
     for k in [1, 5, 7, 9, 11]
@@ -61,8 +60,7 @@ end
     config_list = optimize!(B, X_, y_, accuracy_score, kernel=[direct_kernel], dist=[l1_distance, l2_distance])
     sc = scores(y_, predict(B, X_))
     @test sc.accuracy > 0.85
-    @info "config: ", JSON.json(config_list[1])
+    @info "config: $(JSON.json(config_list[1]))"
     @info "===== scores optimized! B: $(JSON.json(sc))"
 end
 
-exit(0)

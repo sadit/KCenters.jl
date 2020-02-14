@@ -33,48 +33,31 @@ using StatsBase
     end
 end
 
-@testset "NearestCentroid" begin
+@testset "KNC" begin
     X, ylabels = loadiris()
     M = Dict(label => i for (i, label) in enumerate(unique(ylabels) |> sort!))
     y = [M[y] for y in ylabels]
     dist = l2_distance
+    C = kcenters(dist, X, 12)
+    summary = most_frequent_label
     for kernel in [gaussian_kernel, laplacian_kernel, cauchy_kernel, sigmoid_kernel, tanh_kernel, relu_kernel, direct_kernel]
-        C = kcenters(dist, X, y)
-        @info "XXXXXX===== rocchio like>", (kernel, dist)
-
-        D = fit(DeloneHistogram, C)
-        nc = fit(NearestCentroid, D)
-        ypred = predict(nc, kernel(dist), X)
-        @test mean(ypred .== y) > 0.8
-    end
-
-    for kernel in [relu_kernel]
-        @info "XXXXXX==== clustering>", (kernel, dist)
-
-        C = kcenters(dist, X, 21)
-        D = fit(DeloneInvIndex, X, C, 1)
-        nc = fit(NearestCentroid, D, y)
-        @show nc.class_map
-        ypred = predict(nc, kernel(dist), X)
-        @test mean(ypred .== y) > 0.8
-    end
-
-    for kernel in [relu_kernel]
         @info "XXXXXX==== split_entropy>", (kernel, dist)
-        C = kcenters(dist, X, 12)
-        nc = fit(NearestCentroid, dist, C, X, y, verbose=true, split_entropy=0.5)
+        nc = fit(KNC, dist, C, X, y, verbose=true, split_entropy=0.5)
         @show nc.class_map
-        ypred = predict(nc, kernel(dist), X)
+        ypred = predict(nc, kernel(dist), summary, X, 1)
         acc = mean(ypred .== y)
         @show acc
         @test acc > 0.8
         
-        C = kcenters(dist, X, 12, maxiters=0, verbose=true)
-        nc = fit(NearestCentroid, dist, C, X, y, verbose=true, split_entropy=0.5)
-        ypred = predict(nc, direct_kernel(dist), X, 3) # a direct kernel is required for the iris dataset and knn
-        acc = mean(ypred .== y)
-        @show acc
-        @test acc > 0.8
+        
     end
+
+    C = kcenters(dist, X, 12, maxiters=0, verbose=true)
+    nc = fit(KNC, dist, C, X, y, verbose=true, split_entropy=0.5)
+    ypred = predict(nc, direct_kernel(dist), summary, X, 3) # a direct kernel is required for the iris dataset and knn
+    acc = mean(ypred .== y)
+    @show acc
+    @test acc > 0.8
+
 end
 

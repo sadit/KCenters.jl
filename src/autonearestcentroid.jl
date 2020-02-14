@@ -12,6 +12,7 @@ mutable struct AKNC_Config
     kernel::Function
     dist::Function
     centroid::Function
+    summary::Function
 
     k::Int
     ncenters::Int
@@ -27,6 +28,7 @@ function AKNC_Config(;
         kernel::Function=relu_kernel, # [gaussian_kernel, laplacian_kernel, sigmoid_kernel, relu_kernel]
         dist::Function=l2_distance,
         centroid::Function=mean,
+        summary::Function=most_frequent_label,
 
         k::Int=1,
         ncenters::Integer=0,
@@ -38,7 +40,7 @@ function AKNC_Config(;
         minimum_elements_per_centroid=3)
     
     AKNC_Config(
-        kernel, dist, centroid,
+        kernel, dist, centroid, summary,
         k, ncenters, maxiters,
         recall, initial_clusters, split_entropy, minimum_elements_per_centroid)
 end
@@ -86,7 +88,7 @@ Predicts the label of each item in `X` using `model`; k == 0 means for using the
 
 function predict(model::AKNC, X, k::Integer=0)
     k = k == 0 ? model.config.k : k
-    ypred = predict(model.nc, model.kernel, X, k)
+    ypred = predict(model.nc, model.kernel, model.config.summary, X, k)
 end
 """
     after_load(model::AKNC)
@@ -142,6 +144,7 @@ function random_configurations(::Type{AKNC}, H, ssize;
         kernel::AbstractVector=[relu_kernel, direct_kernel], # [gaussian_kernel, laplacian_kernel, sigmoid_kernel, relu_kernel]
         dist::AbstractVector=[l2_distance],
         centroid::AbstractVector=[mean],
+        summary::AbstractVector=[most_frequent_label, mean_label],
         k::AbstractVector=[1],
         maxiters::AbstractVector=[1, 3, 10],
         recall::AbstractVector=[1.0],
@@ -310,7 +313,7 @@ function search_params(::Type{AKNC}, X, y, configurations;
             push!(S, [])
             
             for (itrain, itest) in folds
-                perf = @spawn begin
+                perf = begin #@spawn begin
                     p = evaluate_model(config, X[itrain], y[itrain], X[itest], y[itest], verbose=verbose)
                     save_models ? p : (scores=p.scores, model=nothing)
                 end
