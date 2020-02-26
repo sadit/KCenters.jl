@@ -138,32 +138,37 @@ function mean_label(nc::KNC, res::KnnResult)
 end
 
 """
-    predict(nc::KNC{T}, kernel::Function, summary::Function, X::AbstractVector{T}, k=1) where T
+    predict(nc::KNC{PointType}, kernel::Function, summary::Function, X::AbstractVector{PointType}) where PointType
+    predict(nc::KNC{PointType}, kernel::Function, summary::Function, x::PointType, k::Integer) where PointType
 
 Predicts the class of `x` using the label of the `k` nearest centroid under the `kernel` function.
 """
 function predict(nc::KNC{PointType}, kernel::Function, summary::Function, X::AbstractVector{PointType}, k::Integer) where PointType
     res = KnnResult(k)
-    C = nc.centers
-    dmax = nc.dmax
     ypred = Vector{Int}(undef, length(X))
 
     for j in eachindex(X)
         empty!(res)
-        x = X[j]
-        for i in eachindex(C)
-            s = eval_kernel(kernel, x, C[i], dmax[i])
-            push!(res, i, -s)
-        end
-
-        ypred[j] = summary(nc, res)
+        ypred[j] = predict(nc, kernel, summary, X[j], k, res)
     end
 
     ypred
 end
 
-function predict(nc::KNC{PointType}, kernel::Function, summary::Function, X::PointType, k::Integer) where PointType
-    predict(nc, kernel, summary, [x], k)[1]
+function predict(nc::KNC{PointType}, kernel::Function, summary::Function, x::PointType, k::Integer, res::KnnResult) where PointType
+    C = nc.centers
+    dmax = nc.dmax
+
+    for i in eachindex(C)
+        s = eval_kernel(kernel, x, C[i], dmax[i])
+        push!(res, i, -s)
+    end
+
+    summary(nc, res)
+end
+
+function predict(nc::KNC{PointType}, kernel::Function, summary::Function, x::PointType, k::Integer) where PointType
+    predict(nc, kernel, summary, x, k, KnnResult(k))
 end
 
 """
