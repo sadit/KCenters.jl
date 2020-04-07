@@ -3,6 +3,7 @@
 
 using SimilaritySearch
 export fftraversal
+using Distributed
 
 function _ignore3(a, b, c)
 end
@@ -44,12 +45,18 @@ function fftraversal(callback::Function, dist::Function, X::AbstractVector{T}, s
         imax = 0
 
         D .= 0.0
-        Threads.@threads for i in 1:N
-            D[i] = dist(X[i], pivot)
+
+        if nworkers() == 1
+            Threads.@threads for i in 1:N
+                D[i] = dist(X[i], pivot)
+            end
+        else
+            # only worths for very large datasets or very expensive distance functions
+            D = pmap(obj -> dist(obj, pivot), X)
         end
 
         for i in 1:N
-            # d = dist(X[i], pivot)
+            # d = dist(X[i], pivot) 
             d = D[i]
             callbackdist(i, ipivot, d)
 

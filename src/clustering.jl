@@ -207,7 +207,7 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
         end
         
         verbose && println(stderr, "*** computing centroids ***")
-        for i in 1:length(clusters)
+        Threads.@threads for i in 1:length(clusters)
             plist = clusters[i]
             # C[i] can be empty because we could be using approximate search
             if length(plist) > 0
@@ -228,15 +228,26 @@ function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, ce
 end
 
 function associate_centroids_and_compute_error!(dist, X, index::Index, codes, distances, counters)
-    res = KnnResult(1)
-    for objID in eachindex(X)
-        empty!(res)
-        res = search(index, dist, X[objID], res)
+    Threads.@threads for objID in 1:length(X)
+        res = KnnResult(1)
+        search(index, dist, X[objID], res)
         refID = first(res).objID
         codes[objID] = refID
         distances[objID] = last(res).dist
+    end
+
+    for refID in codes 
         counters[refID] += 1
     end
+    #    res = KnnResult(1)
+    #    for objID in eachindex(X)
+    #        empty!(res)
+    #        res = search(index, dist, X[objID], res)
+    #        refID = first(res).objID
+    #        codes[objID] = refID
+    #        distances[objID] = last(res).dist
+    #        counters[refID] += 1
+    #    end
 
     mean(distances)
 end
