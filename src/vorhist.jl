@@ -42,7 +42,7 @@ function predict(vor::DeloneHistogram{T}, dist::Function, queries::AbstractVecto
     for i in eachindex(queries)
         empty!(res)
         search(vor.centers, dist, queries[i], res)
-        c = first(res).objID
+        c = first(res).id
         sim = max(0.0, 1.0 - first(res).dist  / vor.dmax[c])
         L[i] = sim > 0
     end

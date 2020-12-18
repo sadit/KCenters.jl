@@ -2,7 +2,7 @@
 # License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 
 using SimilaritySearch
-using StatsBase
+using CategoricalArrays, StatsBase
 export enet, dnet, kcenters, kcenters, associate_centroids
 
 """
@@ -26,11 +26,11 @@ function enet(dist::Function, X::AbstractVector{T}, numcenters::Int, knr::Int=1;
     # refs = Vector{Float64}[]
     irefs = Int[]
     nn = [KnnResult(knr) for i in 1:length(X)]
-    dmax = 0.0
+    dmax = zero(Float32)
 
     function callback(c, _dmax)
         push!(irefs, c)
-        dmax = _dmax
+        dmax = convert(Float32, _dmax)
         verbose && println(stderr, "computing fartest point $(length(irefs)), dmax: $dmax, imax: $c")
     end
 
@@ -62,14 +62,14 @@ function dnet(dist::Function, X::AbstractVector{T}, numcenters::Int; verbose=fal
     # criterion = change_criterion(0.01)
     n = length(X)
     irefs = Int[]
-    dmax = Float64[]
+    dmax = Float32[]
     seq = [KnnResult(1) for i in 1:n]
 
     function callback(c, res, map)
         push!(irefs, c)
-        push!(dmax, last(res).dist)
+        push!(dmax, farthestdist(res))
         for p in res
-            push!(seq[map[p.objID]], c, p.dist)
+            push!(seq[map[p.id]], c, p.dist)
         end
     
        verbose && println(stderr, "dnet -- selected-center: $(length(irefs)), id: $c, dmax: $(dmax[end])")
@@ -82,24 +82,25 @@ function dnet(dist::Function, X::AbstractVector{T}, numcenters::Int; verbose=fal
 end
 
 """
-    kcenters(dist::Function, X::AbstractVector{T}, y::AbstractVector, centroid::Function=mean) where T
+    kcenters(dist::Function, X::AbstractVector{T}, y::CategoricalArray, centroid::Function=mean) where T
 
 Computes a centroid per region (each region is defined by the set of items having the same label in `y`).
 The output is compatible with `kcenters` function when `eltype(y)` is Int
 """
-function kcenters(dist::Function, X::AbstractVector{T}, y::AbstractVector{I}, centroid::Function=mean) where {T,I<:Integer}
-    invindex = labelmap(y)
-    m = length(invindex)
+function kcenters(dist::Function, X::AbstractVector{T}, y::CategoricalArray, centroid::Function=mean) where T
+    m = length(levels(y))
     centers = Vector{T}(undef, m)
     counts = zeros(Int, m)
-    for (i, L) in sort!(collect(invindex))
-        C = @view X[L]
-        centers[i] = centroid(C)
-        counts[i] = length(C)
+    invindex = labelmap(y.refs)
+    
+    for i in 1:m
+        elements = @view X[invindex[i]]
+        centers[i] = centroid(elements)
+        counts[i] = length(elements)
     end
 
-    distances = [dist(X[i], centers[y[i]]) for i in eachindex(X)]
-    (centroids=centers, counts=counts, codes=y, distances=distances, err=sum(distances))
+    distances = [dist(X[i], centers[y.refs[i]]) for i in eachindex(X)]
+    (centroids=centers, counts=counts, codes=Int.(y.refs), distances=distances, err=sum(distances))
 end
 
 """
@@ -153,7 +154,7 @@ function kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Fu
         C = Dict{Int, Int}()
         # D = Dict{Int, Float64}()
         for p in E.seq
-            i = first(p).objID
+            i = first(p).id
             C[i] = get(C, i, 0) + 1
             d = last(p).dist
             # D[i] = max(get(D, i, 0.0), d)
@@ -175,9 +176,10 @@ function kcenters(dist::Function, X::AbstractVector{T}, k::Integer, centroid::Fu
 end
 
 function kcenters(dist::Function, X::AbstractVector{T}, C::AbstractVector{T}, centroid::Function=mean; maxiters=-1, tol=0.001, recall=1.0, verbose=true) where T
-    # Lloyd's algoritm (kmeans)
+    # Lloyd's algoritm
     n = length(X)
     numcenters = length(C)
+    
     if maxiters == -1
         maxiters = ceil(Int, log2(n))
     end
@@ -231,7 +233,7 @@ function associate_centroids_and_compute_error!(dist, X, index::Index, codes, di
     Threads.@threads for objID in 1:length(X)
         res = KnnResult(1)
         search(index, dist, X[objID], res)
-        refID = first(res).objID
+        refID = first(res).id
         codes[objID] = refID
         distances[objID] = last(res).dist
     end
@@ -243,7 +245,7 @@ function associate_centroids_and_compute_error!(dist, X, index::Index, codes, di
     #    for objID in eachindex(X)
     #        empty!(res)
     #        res = search(index, dist, X[objID], res)
-    #        refID = first(res).objID
+    #        refID = first(res).id
     #        codes[objID] = refID
     #        distances[objID] = last(res).dist
     #        counters[refID] += 1

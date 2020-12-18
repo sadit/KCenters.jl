@@ -3,14 +3,14 @@
 
 using Test
 
-using KCenters, SimilaritySearch, MLDataUtils
+using KCenters, SimilaritySearch, CategoricalArrays
 using StatsBase, JSON
 
 JSON.lower(f::Function) = string(f)
 
 function generate_data()
     X = [rand(2) for i in 1:1000]
-    y = [round(Int, 1 + 2 * prod(x)) for x in X]
+    y = categorical([round(Int, 1 + 2 * prod(x)) for x in X])
     X, y
 end
 

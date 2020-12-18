@@ -32,7 +32,7 @@ function dnet(callback::Function, dist::Function, X::AbstractVector{T}, k::Int) 
         search(I, metadist, n, res)
         callback(I.db[n], res, I.db)
         m = n - length(res)
-        rlist = sort!([p.objID for p in res])
+        rlist = sort!([p.id for p in res])
         numzeros = 0
         while length(rlist) > 0
             if rlist[end] > m

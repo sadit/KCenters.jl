@@ -48,7 +48,7 @@ Searches nearest neighbors of `q` inside the `index` under the distance function
 function search(index::DeloneInvIndex{T}, dist::Function, q::T, res::KnnResult) where T
     cres = search(index.centers, dist, q, KnnResult(index.region_expansion))
     for c in cres
-        @inbounds for i in index.lists[c.objID]
+        @inbounds for i in index.lists[c.id]
             d = dist(q, index.db[i])
             push!(res, i, d)
         end

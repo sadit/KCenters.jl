@@ -1,8 +1,8 @@
 # This file is a part of KCenters.jl
 # License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 
-using KCenters, MLDataUtils
-using Distributed, Random, StatsBase
+using KCenters
+using MLDataUtils, Distributed, Random, StatsBase
 import StatsBase: fit, predict
 import Base: hash, isequal
 export search_params, random_configurations, combine_configurations, fit, after_load, predict, AKNC, AKNC_Config
@@ -279,7 +279,7 @@ function search_params(::Type{AKNC}, X, y, configurations;
         tol::AbstractFloat=0.01,
         verbose=true,
         models::Union{Nothing,Dict}=nothing,
-        distributed=true,
+        distributed=false,
         config_kwargs...
     )
     

@@ -33,7 +33,7 @@ end
 Creates `b` classifiers, each trained with a random `ratio` of the dataset;
 these classifiers are joint into a single classifier with `glue`.
 """
-function bagging(config::AKNC_Config, X::AbstractVector, y::AbstractVector{I}; b=13, ratio=0.5) where {I<:Integer}
+function bagging(config::AKNC_Config, X::AbstractVector, y::CategoricalArray; b=13, ratio=0.5)
     indexes = collect(1:length(X))
     m = ceil(Int, ratio * length(X))
 

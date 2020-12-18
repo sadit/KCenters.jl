@@ -5,7 +5,7 @@ using Test
 
 include("loaddata.jl")
 using KCenters, SimilaritySearch
-using StatsBase
+using StatsBase, CategoricalArrays
 
 @testset "One class classifier with DeloneHistogram" begin
 
@@ -36,7 +36,7 @@ end
 @testset "KNC" begin
     X, ylabels = loadiris()
     M = Dict(label => i for (i, label) in enumerate(unique(ylabels) |> sort!))
-    y = [M[y] for y in ylabels]
+    y = categorical([M[y] for y in ylabels])
     dist = l2_distance
     C = kcenters(dist, X, 12)
     summary = most_frequent_label

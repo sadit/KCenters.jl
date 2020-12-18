@@ -39,10 +39,10 @@ is among the ``k`` nearest references of ``u``.
 """
 function invindex(dist::Function, objects::AbstractVector{T}, refs::Index; k::Int=1) where T
     π = [Vector{Int}() for i in 1:length(refs.db)]
-    # partition((i, p) -> push!(π[p.objID], i), dist, objects, refs, k=k)
+    # partition((i, p) -> push!(π[p.id], i), dist, objects, refs, k=k)
     partition(dist, objects, refs, k=k) do i, res
         for p in res
-            push!(π[p.objID], i)
+            push!(π[p.id], i)
         end
     end
     π
@@ -56,7 +56,7 @@ Computes the nearest reference of each item in the dataset and return it as a se
 function sequence(dist::Function, objects::AbstractVector{T}, refs::Index) where T
     s = Vector{Int}(undef, length(objects))
     partition(dist, objects, refs) do i, res
-        s[i] = first(res).objID
+        s[i] = first(res).id
     end
     s
 end
@@ -69,7 +69,7 @@ Computes an array of k-nearest neighbors for `objects`
 function knr(dist::Function, objects::AbstractVector{T}, refs::Index) where T
     s = Vector{Vector{Int}}(undef, length(objects))
     partition(dist, objects, refs) do i, res
-        s[i] = [p.objID for p in res]
+        s[i] = [p.id for p in res]
     end
     s
 end

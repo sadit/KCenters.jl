@@ -6,6 +6,7 @@ using SimilaritySearch
 using LinearAlgebra
 using StatsBase
 import StatsBase: fit, predict
+using CategoricalArrays
 export KNC, fit, predict, transform, most_frequent_label, mean_label
 
 """
@@ -44,71 +45,71 @@ function fit(::Type{KNC}, C::NamedTuple, class_map::Vector{Int}=Int[]; verbose=t
     fit(KNC, D, class_map)
 end
 
-function fit(::Type{KNC},
-        dist::Function, input_clusters::NamedTuple,
-        train_X::AbstractVector,
-        train_y::AbstractVector{_Integer},
-        centroid::Function=mean;
-        split_entropy=0.3,
-        minimum_elements_per_centroid=1,
-        verbose=false
-    ) where _Integer<:Integer
-    
-    _lists = labelmap(input_clusters.codes)
+function fit(
+    ::Type{KNC},
+    dist::Function,
+    input_clusters::NamedTuple,
+    train_X::AbstractVector,
+    train_y::CategoricalArray,
+    centroid::Function=mean;
+    split_entropy=0.3,
+    minimum_elements_per_centroid=1,
+    verbose=false
+)    
     centroids = eltype(train_X)[] # clusters
     classes = Int[] # class mapping between clusters and classes
     dmax = Float64[]
-    m = length(input_clusters.centroids)
-    nclasses = length(unique(train_y))
-
+    ncenters = length(input_clusters.centroids)
+    nclasses = length(levels(train_y))
     _ent(f, n) = (f == 0) ? 0.0 : (f / n * log(n / f))
     
-    for i in 1:m
-        lst = get(_lists, i, nothing)
-        lst === nothing && continue
-        #ylst = @view train_y[lst]
-        ylst = train_y[lst]
-        freqs = counts(ylst, 1:nclasses)
+    for centerID in 1:ncenters
+        lst = Int[pos for (pos, c) in enumerate(input_clusters.codes) if c == centerID] # objects related to this centerID
+        ylst = @view train_y.refs[lst] # real labels related to this centerID
+        freqs = counts(ylst, 1:nclasses) # histogram of labels in this centerID
+        @info freqs
         labels = findall(f -> f >= minimum_elements_per_centroid, freqs)
+
+        # compute entropy of the set of labels
+        # skip if the minimum number of elements is not reached
         if length(labels) == 0
-            verbose && println(stderr, "*** center $i: ignoring all elements because minimum-frequency restrictions were not met, freq >= $minimum_elements_per_centroid, freqs: $freqs")
+            verbose && println(stderr, "*** center $centerID: ignoring all elements because minimum-frequency restrictions were not met, freq >= $minimum_elements_per_centroid, freqs: $freqs")
             continue
-        else
-            verbose && println(stderr, "*** center $i: selecting labels $labels (freq >= $minimum_elements_per_centroid) [from $freqs]")
         end
 
+        verbose && println(stderr, "*** center $centerID: selecting labels $labels (freq >= $minimum_elements_per_centroid) [from $freqs]")
+
         if length(labels) == 1
-            freqs_ = freqs
+            # a unique label, skip computation
             e = 0.0
         else
             freqs_ = freqs[labels]
             n = sum(freqs_)
             e = sum(_ent(f, n) for f in freqs_) / log(length(labels))
-            verbose && println(stderr, "** centroid: $i, normalized-entropy: $e, ", 
+            verbose && println(stderr, "** centroid: $centerID, normalized-entropy: $e, ", 
                 collect(zip(labels, freqs_)))
         end
 
-        if e > split_entropy
-            X = train_X[lst]
-            invindex = labelmap(ylst)
+        if e > split_entropy            
             for l in labels
-                XX = X[invindex[l]]
+                XX = [train_X[lst[pos]] for (pos, c) in enumerate(ylst) if c == l]
                 c = centroid(XX)
                 push!(centroids, c)
                 push!(classes, l)
                 d = 0.0
                 for u in XX
-                    d = max(d, dist(u, c))
+                    d = max(d, convert(Float64, dist(u, c)))
                 end
+
                 push!(dmax, d)
             end
         else
-            push!(centroids, input_clusters.centroids[i])
+            push!(centroids, input_clusters.centroids[centerID])
             freq, pos = findmax(freqs)
             push!(classes, pos)
             d = 0.0
             for objID in lst
-                d = max(d, dist(train_X[objID], centroids[end]))
+                d = max(d, convert(Float64, dist(train_X[objID], centroids[end])))
             end
             push!(dmax, d)
          end
@@ -124,7 +125,7 @@ end
 Summary function that computes the label as the most frequent label among labels of the k nearest prototypes (categorical labels)
 """
 function most_frequent_label(nc::KNC, res::KnnResult)
-    c = counts([nc.class_map[p.objID] for p in res], 1:nc.nclasses)
+    c = counts([nc.class_map[p.id] for p in res], 1:nc.nclasses)
     findmax(c)[end]
 end
 
@@ -134,7 +135,7 @@ end
 Summary function that computes the label as the mean of the k nearest labels (ordinal classification)
 """
 function mean_label(nc::KNC, res::KnnResult)
-    round(Int, mean([nc.class_map[p.objID] for p in res]))
+    round(Int, mean([nc.class_map[p.id] for p in res]))
 end
 
 """
