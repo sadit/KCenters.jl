@@ -2,7 +2,7 @@
 # License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 
 using Random
-export glue, bagging
+export glue, bagging, optimize!
 
 """
     glue(arr::AbstractVector{K}) where K <: KNC

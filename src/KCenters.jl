@@ -10,7 +10,6 @@ include("dnet.jl")
 include("utils.jl")
 include("vorhist.jl")
 include("clustering.jl")
-include("invindex.jl")
 include("kernels.jl")
 
 
@@ -53,8 +52,9 @@ function softmax!(vec::AbstractVector)
         den += exp(v)
     end
 
+    den = 1.0 / den
     @inbounds @simd for i in eachindex(vec)
-        vec[i] = exp(vec[i]) / den
+        vec[i] = exp(vec[i]) * den
     end
 
     vec
@@ -63,7 +63,6 @@ end
 include("nearestcentroid.jl")
 include("autonearestcentroid.jl")
 include("multinknc.jl")
-
 
 """
     transform(nc::KNC{T}, kernel::Function, X, normalize!::Function=softmax!)

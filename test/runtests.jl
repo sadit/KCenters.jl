@@ -19,5 +19,4 @@ end
 include("kcenters.jl")
 include("nearestcentroid.jl")
 include("autonearestcentroid.jl")
-include("invindex.jl")
 

@@ -57,7 +57,7 @@ end
         @info "===== scores for $k: $(JSON.json(sb))"
     end
 
-    config_list = optimize!(B, X_, y_, accuracy_score, kernel=[direct_kernel], dist=[l1_distance, l2_distance])
+    config_list = KCenters.optimize!(B, X_, y_, accuracy_score; kernel=[direct_kernel], dist=[l1_distance, l2_distance])
     sc = scores(y_, predict(B, X_))
     @test sc.accuracy > 0.85
     @info "config: $(JSON.json(config_list[1]))"
