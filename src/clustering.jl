@@ -2,7 +2,7 @@
 # License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 
 using SimilaritySearch
-using CategoricalArrays, StatsBase
+using CategoricalArrays, StatsBase, MLDataUtils
 export enet, dnet, kcenters, kcenters, associate_centroids
 
 """
