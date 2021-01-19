@@ -6,9 +6,15 @@ import StatsBase: fit
 using Random
 export dnet
 
+struct MaskedDistance{DataType<:AbstractVector,DistType<:PreMetric} <: PreMetric
+    dist::DistType
+    db::DataType
+end
+
+SimilaritySearch.evaluate(m::MaskedDistance, i::Integer, j::Integer) = @inbounds evaluate(m.dist, m.db[i], m.db[j])
 
 """
-    dnet(callback::Function, dist::Function, X::AbstractVector{T}, k::Int) where {T}
+    dnet(callback::Function, dist::PreMetric, X::AbstractVector{T}, k::Int) where {T}
 
 A `k`-net is a set of points `M` such that each object in `X` can be:
 - It is in `M`
@@ -20,16 +26,17 @@ The dnet function uses the `callback` function as an output mechanism. This func
 res is a `KnnResult` object (from SimilaritySearch.jl).
 
 """
-function dnet(callback::Function, dist::Function, X::AbstractVector{T}, k::Int) where {T}
+function dnet(callback::Function, dist::PreMetric, X::AbstractVector{T}, k::Int) where {T}
     N = length(X)
-    metadist = (a::Int, b::Int) -> dist(X[a], X[b])
-    I = fit(Sequential, shuffle!(collect(1:N)))
+    metadist = (a::Int, b::Int) -> evaluate(dist, X[a], X[b])
+
+    I = ExhaustiveSearch(MaskedDistance(dist, X), shuffle!(collect(1:N)))
     res = KnnResult(k)
 
     while length(I.db) > 0
         empty!(res)
         n = length(I.db)
-        search(I, metadist, n, res)
+        search(I, n, res)
         callback(I.db[n], res, I.db)
         m = n - length(res)
         rlist = sort!([p.id for p in res])
@@ -50,6 +57,7 @@ function dnet(callback::Function, dist::Function, X::AbstractVector{T}, k::Int) 
         if length(E) > 0
             I.db[rlist] .= E
         end
+
         resize!(I.db, m)
     end
 end

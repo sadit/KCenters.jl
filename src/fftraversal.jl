@@ -9,7 +9,7 @@ function _ignore3(a, b, c)
 end
 
 """
-    fftraversal(callback::Function, dist::Function, X::AbstractVector{T}, stop, callbackdist=_ignore3) where {T}
+    fftraversal(callback::Function, dist::PreMetric, X::AbstractVector{T}, stop, callbackdist=_ignore3) where {T}
 
 Selects a number of farthest points in `X`, using a farthest first traversal
 
@@ -22,7 +22,7 @@ Selects a number of farthest points in `X`, using a farthest first traversal
 - The callbackdist function is called on each distance evaluation between pivots and items in the dataset
     `callbackdist(index-pivot, index-item, distance)`
 """
-function fftraversal(callback::Function, dist::Function, X::AbstractVector{T}, stop, callbackdist=_ignore3) where {T}
+function fftraversal(callback::Function, dist::PreMetric, X::AbstractVector{T}, stop, callbackdist=_ignore3) where {T}
     N = length(X)
     D = Vector{Float64}(undef, N)
     dmaxlist = Float64[]
@@ -48,15 +48,15 @@ function fftraversal(callback::Function, dist::Function, X::AbstractVector{T}, s
 
         if nworkers() == 1
             Threads.@threads for i in 1:N
-                D[i] = dist(X[i], pivot)
+                D[i] = evaluate(dist, X[i], pivot)
             end
         else
             # only worths for very large datasets or very expensive distance functions
-            D = pmap(obj -> dist(obj, pivot), X)
+            D = pmap(obj -> evaluate(dist, obj, pivot), X)
         end
 
         for i in 1:N
-            # d = dist(X[i], pivot) 
+            # d = evaluate(dist, X[i], pivot) 
             d = D[i]
             callbackdist(i, ipivot, d)
 

@@ -1,7 +1,7 @@
 # This file is a part of KCenters.jl, based on a previous implementation of KernelMethods.jl (with the same license and author)
 # License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 using StatsBase
-export accuracy_score, precision_recall, precision_score, recall_score, f1_score, scores
+export accuracy_score, precision_recall, precision_score, recall_score, f1_score, classification_scores
 
 ## classification scores
 """
@@ -80,14 +80,14 @@ function f1_score(gold, predict; weight=:macro)::Float64
 end
 
 """
-    scores(gold, predicted,  le=nothing)
+    classification_scores(gold, predicted,  le=nothing)
 
 Computes several scores for the given gold-standard and predictions, namely: 
 precision, recall, and f1 scores, for global and per-class granularity. If le is given,
 the internal numeric labels are translated using the MLLabelUtils interface.
 
 """
-function scores(gold, predicted, le=nothing)
+function classification_scores(gold, predicted, le=nothing)
     class_f1 = Dict()
 	class_precision = Dict()
 	class_recall = Dict()

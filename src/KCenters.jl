@@ -10,6 +10,7 @@ include("dnet.jl")
 include("utils.jl")
 include("clustering.jl")
 
+import Distances: evaluate
 
 export transform, softmax!
 """
