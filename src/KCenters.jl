@@ -3,7 +3,6 @@
 
 module KCenters
 
-include("scores.jl")
 include("criterions.jl")
 include("fftraversal.jl")
 include("dnet.jl")

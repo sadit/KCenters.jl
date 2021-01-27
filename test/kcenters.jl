@@ -4,9 +4,7 @@
 using Test
 using SimilaritySearch, KCenters, StatsBase
 
-include("loaddata.jl")
-
-X, y = loadiris()
+const X = [rand(4) for i in 1:1000]
 
 @testset "Clustering with enet" begin
     for i in 2:5

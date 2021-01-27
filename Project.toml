@@ -1,7 +1,7 @@
 name = "KCenters"
 uuid = "5d8de97f-65f8-4dd6-a15b-0f89c36a43ce"
 authors = ["Eric S. Tellez <donsadit@gmail.com>"]
-version = "0.3.0"
+version = "0.3.1"
 
 [deps]
 CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
