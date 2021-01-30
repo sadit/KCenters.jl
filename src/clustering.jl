@@ -3,112 +3,46 @@
 
 using SimilaritySearch
 using CategoricalArrays, StatsBase, MLDataUtils
-export enet, dnet, kcenters, kcenters, associate_centroids
+export enet, dnet, kcenters, associate_centroids, ClusteringData
 
-"""
-    enet(dist::PreMetric, X::AbstractVector{T}, numcenters::Int, knr::Int=1; verbose=false) where T
-
-Selects `numcenters` far from each other based on Farthest First Traversal.
-
-- `dist` distance function
-- `X` the objects to be computed
-- `numcenters` number of centers to be computed
-- `knr` number of nearest references per object (knr=1 defines a partition)
-
-Returns a named tuple ``(nn, irefs, dmax)``.
-
-- `irefs` contains the list of centers (indexes to ``X``)
-- `seq` contains the ``k`` nearest references for each object in ``X`` (in ``X`` order) 
-- `dmax` smallest distance among centers
-
-"""
-function enet(dist::PreMetric, X::AbstractVector{T}, numcenters::Int, knr::Int=1; verbose=false) where T
-    # refs = Vector{Float64}[]
-    irefs = Int[]
-    nn = [KnnResult(knr) for i in 1:length(X)]
-    dmax = zero(Float32)
-
-    function callback(c, _dmax)
-        push!(irefs, c)
-        dmax = convert(Float32, _dmax)
-        verbose && println(stderr, "computing fartest point $(length(irefs)), dmax: $dmax, imax: $c")
-    end
-
-    function capturenn(i, refID, d)
-        push!(nn[i], refID, d)
-    end
-
-    fftraversal(callback, dist, X, size_criterion(numcenters), capturenn)
-    return (irefs=irefs, seq=nn, dmax=dmax)
+struct ClusteringData{DataType<:AbstractVector}
+    centers::DataType
+    freqs::Vector{Int32}
+    codes::Vector{Int32}
+    distances::Vector{Float32}
+    err::Vector{Float32}
 end
 
-"""
-    dnet(dist::PreMetric, X::AbstractVector{T}, numcenters::Int, knr::Int) where T
-
-Selects `numcenters` far from each other based on density nets.
-
-- `dist` distance function
-- `X` the objects to be computed
-- `numcenters` number of centers to be computed
-
-Returns a named tuple ``(nn, irefs, dmax)``.
-
-- `irefs` contains the list of centers (indexes to ``X``)
-- `seq` contains the ``k`` nearest references for each object in ``X`` (in ``X`` order) 
-- `dmax` a list of coverage-radius of each center (aligned with irefs centers) smallest distance among centers
+StructTypes.StructType(::Type{<:ClusteringData}) = StructTypes.Struct()
 
 """
-function dnet(dist::PreMetric, X::AbstractVector{T}, numcenters::Int; verbose=false) where T
-    # criterion = change_criterion(0.01)
-    n = length(X)
-    irefs = Int[]
-    dmax = Float32[]
-    seq = [KnnResult(1) for i in 1:n]
+    kcenters(dist::PreMetric, X::AbstractVector{T}, y::CategoricalArray, sel::AbstractCenterSelection=CentroidSelection()) where T
 
-    function callback(c, res, map)
-        push!(irefs, c)
-        push!(dmax, last(res).dist)
-        for p in res
-            push!(seq[map[p.id]], c, p.dist)
-        end
-    
-       verbose && println(stderr, "dnet -- selected-center: $(length(irefs)), id: $c, dmax: $(dmax[end])")
-    end
-    
-    dnet(callback, dist, X, floor(Int, n / numcenters))
-    #@info [length(p) for p in seq]
-    #@info sort(irefs), sum([length(p) for p in seq]), length(irefs)
-    (irefs=irefs, seq=seq, dmax=dmax)
-end
-
-"""
-    kcenters(dist::PreMetric, X::AbstractVector{T}, y::CategoricalArray, centroid::Function=mean) where T
-
-Computes a centroid per region (each region is defined by the set of items having the same label in `y`).
+Computes a center per region (each region is defined by the set of items having the same label in `y`).
 The output is compatible with `kcenters` function when `eltype(y)` is Int
 """
-function kcenters(dist::PreMetric, X::AbstractVector{T}, y::CategoricalArray, centroid::Function=mean) where T
+function kcenters(dist::PreMetric, X::AbstractVector{T}, y::CategoricalArray, sel::AbstractCenterSelection=CentroidSelection()) where T
     m = length(levels(y))
     centers = Vector{T}(undef, m)
-    counts = zeros(Int, m)
+    freqs = zeros(Int, m)
     invindex = labelmap(y.refs)
     
     for i in 1:m
         elements = @view X[invindex[i]]
-        centers[i] = centroid(elements)
-        counts[i] = length(elements)
+        centers[i] = center(sel, elements)
+        freqs[i] = length(elements)
     end
 
     distances = [evaluate(dist, X[i], centers[y.refs[i]]) for i in eachindex(X)]
-    (centroids=centers, counts=counts, codes=Int.(y.refs), distances=distances, err=sum(distances))
+    ClusteringData(centers, freqs, codes, distances, sum(distances))
 end
 
 """
-    kcenters(dist::PreMetric, X::AbstractVector{T}, k::Integer, centroid::Function=mean; initial=:fft, maxiters=0, tol=0.001, recall=1.0) where T
-    kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractzVector{T}, centroid::Function=mean; maxiters=30, tol=0.001, recall=1.0) where T
+    kcenters(dist::PreMetric, X::AbstractVector{T}, k::Integer; sel::AbstractCenterSelection=CentroidSelection(), initial=:fft, maxiters=0, tol=0.001, recall=1.0) where T
+    kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractzVector{T}; sel::AbstractCenterSelection=CentroidSelection(), maxiters=30, tol=0.001, recall=1.0) where T
 
-Performs a kcenters clustering of `X` using `dist` as distance function and `centroid` to compute centroid objects.
-It is based on the k-means algorithm yet using different algorithms as initial clusters.
+Performs a kcenters clustering of `X` using `dist` as distance function and `sel` to compute center objects.
+It is based on the Lloyd's algorithm yet using different algorithms as initial clusters.
     - `:fft` the _farthest first traversal_ selects a set of farthest points among them to serve as cluster seeds.
     - `:dnet` the _density net_ algorithm selects a set of points following the same distribution of the datasets; in contrast with a random selection, `:dnet` ensures that the selected points are not ``\\lfloor n/k \\rfloor`` nearest neighbors.
     - `:sfft` the `:fft` over a ``k + \\log n`` random sample
@@ -118,9 +52,7 @@ It is based on the k-means algorithm yet using different algorithms as initial c
 If recall is 1.0 then an exhaustive search is made to find associations of each item to its nearest cluster; if ``0 < recall < 0`` then an approximate index
 (`SearchGraph` from `SimilaritySearch.jl`) will be used for the same purpose; the `recall` controls the expected search quality (trade with search time).
 """
-function kcenters(dist::PreMetric, X::AbstractVector{T}, k::Integer, centroid::Function=mean; initial=:fft, maxiters=10, tol=0.001, recall=1.0, verbose=false) where T
-    local err::Float64 = 0.0
-    
+function kcenters(dist::PreMetric, X::AbstractVector{T}, k::Integer; sel::AbstractCenterSelection=CentroidSelection(), initial=:fft, maxiters=10, tol=0.001, recall=1.0, verbose=false) where T
     if initial == :fft
         m = 0
         irefs = enet(dist, X, k+m).irefs
@@ -172,10 +104,10 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, k::Integer, centroid::F
         initial = initial::AbstractVector{T}
     end
 
-    kcenters(dist, X, initial, centroid, maxiters=maxiters, tol=tol, recall=recall, verbose=verbose)
+    kcenters(dist, X, initial, sel=sel, maxiters=maxiters, tol=tol, recall=recall, verbose=verbose)
 end
 
-function kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractVector{T}, centroid::Function=mean; maxiters=-1, tol=0.001, recall=1.0, verbose=true) where T
+function kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractVector{T}; sel::AbstractCenterSelection=CentroidSelection(), maxiters=-1, tol=0.001, recall=1.0, verbose=true) where T
     # Lloyd's algoritm
     n = length(X)
     numcenters = length(C)
@@ -188,14 +120,14 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractVector{T}, c
         if recall >= 1.0
             ExhaustiveSearch(dist, CC)
         else
-            SearchGraph(dist, CC; recall=recall)
+            SearchGraph(dist, CC; recall=recall, automatic_optimization=true)
         end
     end
 
-    counts = zeros(Int, numcenters)
-    codes = Vector{Int}(undef, n)
-    distances = zeros(Float64, n)
-    err = [typemax(Float64), associate_centroids_and_compute_error!(X, create_index(C), codes, distances, counts)]
+    freqs = zeros(Int32, numcenters)
+    codes = Vector{Int32}(undef, n)
+    distances = zeros(Float32, n)
+    err = Float32[3.4e38, associate_centroids_and_compute_error!(X, create_index(C), codes, distances, freqs)]
     iter = 0
 
     while iter < maxiters && err[end-1] - err[end] >= tol
@@ -213,12 +145,12 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractVector{T}, c
             plist = clusters[i]
             # C[i] can be empty because we could be using approximate search
             if length(plist) > 0
-                C[i] = centroid(X[plist])
+                C[i] = center(sel, X[plist])
             end
         end
         
         verbose && println(stderr, "*** computing $(numcenters) nearest references ***")
-        s = associate_centroids_and_compute_error!(X, create_index(C), codes, distances, counts)
+        s = associate_centroids_and_compute_error!(X, create_index(C), codes, distances, freqs)
 
         push!(err, s)
         @assert !isnan(err[end]) "ERROR invalid score $err"
@@ -226,7 +158,7 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractVector{T}, c
     end
     
     verbose && println(stderr, "*** finished computation of $(numcenters) references, err: $err ***")
-    (centroids=C, counts=counts, codes=codes, distances=distances, err=err)
+    ClusteringData(C, freqs, codes, distances, err)
 end
 
 function associate_centroids_and_compute_error!(X, index::AbstractSearchContext, codes, distances, counters)
@@ -241,15 +173,6 @@ function associate_centroids_and_compute_error!(X, index::AbstractSearchContext,
     for refID in codes 
         counters[refID] += 1
     end
-    #    res = KnnResult(1)
-    #    for objID in eachindex(X)
-    #        empty!(res)
-    #        res = search(index, dist, X[objID], res)
-    #        refID = first(res).id
-    #        codes[objID] = refID
-    #        distances[objID] = last(res).dist
-    #        counters[refID] += 1
-    #    end
 
     mean(distances)
 end
@@ -257,19 +180,19 @@ end
 """
     associate_centroids(dist::PreMetric, X, centers)
 
-Returns the named tuple `(codes=codes, counts=counts, distances=distances, err=s)` where codes contains the nearest centroid
+Returns the named tuple `(codes=codes, freqs=freqs, distances=distances, err=s)` where codes contains the nearest center
 index for each item in `X` under the context of the `dist` distance function. `C` is the set of centroids and
 `X` the dataset of objects. `C` also can be provided as a SimilaritySearch's Index.
 """
 function associate_centroids(dist::PreMetric, X, centers)
     n = length(X)
-    counts = zeros(Int, length(centers))
+    freqs = zeros(Int, length(centers))
     codes = Vector{Int}(undef, n)
     distances = Vector{Float64}(undef, n)
     if centers isa AbstractVector
         centers = ExhaustiveSearch(dist, centers)
     end
-    s = associate_centroids_and_compute_error!(X, centers, codes, distances, counts)
+    s = associate_centroids_and_compute_error!(X, centers, codes, distances, freqs)
     (codes=codes, distances=distances, err=s)
 end
 

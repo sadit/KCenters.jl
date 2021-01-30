@@ -2,7 +2,7 @@
 # License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 
 using SimilaritySearch
-export fftraversal
+export fftraversal, enet
 using Distributed
 
 function _ignore3(a, b, c)
@@ -74,4 +74,42 @@ function fftraversal(callback::Function, dist::PreMetric, X::AbstractVector{T}, 
             break
         end
     end
+end
+
+
+"""
+    enet(dist::PreMetric, X::AbstractVector{T}, numcenters::Int, knr::Int=1; verbose=false) where T
+
+Selects `numcenters` far from each other based on Farthest First Traversal.
+
+- `dist` distance function
+- `X` the objects to be computed
+- `numcenters` number of centers to be computed
+- `knr` number of nearest references per object (knr=1 defines a partition)
+
+Returns a named tuple ``(nn, irefs, dmax)``.
+
+- `irefs` contains the list of centers (indexes to ``X``)
+- `seq` contains the ``k`` nearest references for each object in ``X`` (in ``X`` order) 
+- `dmax` smallest distance among centers
+
+"""
+function enet(dist::PreMetric, X::AbstractVector{T}, numcenters::Int, knr::Int=1; verbose=false) where T
+    # refs = Vector{Float64}[]
+    irefs = Int[]
+    nn = [KnnResult(knr) for i in 1:length(X)]
+    dmax = zero(Float32)
+
+    function callback(c, _dmax)
+        push!(irefs, c)
+        dmax = convert(Float32, _dmax)
+        verbose && println(stderr, "computing fartest point $(length(irefs)), dmax: $dmax, imax: $c")
+    end
+
+    function capturenn(i, refID, d)
+        push!(nn[i], refID, d)
+    end
+
+    fftraversal(callback, dist, X, size_criterion(numcenters), capturenn)
+    return (irefs=irefs, seq=nn, dmax=dmax)
 end

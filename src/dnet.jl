@@ -2,7 +2,6 @@
 # License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 
 using SimilaritySearch
-import StatsBase: fit
 using Random
 export dnet
 
@@ -60,4 +59,44 @@ function dnet(callback::Function, dist::PreMetric, X::AbstractVector{T}, k::Int)
 
         resize!(I.db, m)
     end
+end
+
+
+"""
+    dnet(dist::PreMetric, X::AbstractVector{T}, numcenters::Int, knr::Int) where T
+
+Selects `numcenters` far from each other based on density nets.
+
+- `dist` distance function
+- `X` the objects to be computed
+- `numcenters` number of centers to be computed
+
+Returns a named tuple ``(nn, irefs, dmax)``.
+
+- `irefs` contains the list of centers (indexes to ``X``)
+- `seq` contains the ``k`` nearest references for each object in ``X`` (in ``X`` order) 
+- `dmax` a list of coverage-radius of each center (aligned with irefs centers) smallest distance among centers
+
+"""
+function dnet(dist::PreMetric, X::AbstractVector{T}, numcenters::Int; verbose=false) where T
+    # criterion = change_criterion(0.01)
+    n = length(X)
+    irefs = Int[]
+    dmax = Float32[]
+    seq = [KnnResult(1) for i in 1:n]
+
+    function callback(c, res, map)
+        push!(irefs, c)
+        push!(dmax, last(res).dist)
+        for p in res
+            push!(seq[map[p.id]], c, p.dist)
+        end
+    
+       verbose && println(stderr, "dnet -- selected-center: $(length(irefs)), id: $c, dmax: $(dmax[end])")
+    end
+    
+    dnet(callback, dist, X, floor(Int, n / numcenters))
+    #@info [length(p) for p in seq]
+    #@info sort(irefs), sum([length(p) for p in seq]), length(irefs)
+    (irefs=irefs, seq=seq, dmax=dmax)
 end

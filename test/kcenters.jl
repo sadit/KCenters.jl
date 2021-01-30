@@ -2,7 +2,7 @@
 # License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 
 using Test
-using SimilaritySearch, KCenters, StatsBase
+using SimilaritySearch, KCenters, StatsBase, JSON3
 
 const X = [rand(4) for i in 1:1000]
 
@@ -28,14 +28,31 @@ end
     @show mean(cfft.distances)
     @show mean(cdnet.distances)
     @show mean(crand.distances)
+
+    @test abs(mean(JSON3.read(JSON3.write(cfft), typeof(cfft)).distances) - mean(cfft.distances)) < 1e-3
 end
 
+
+@testset "Clustering with KCenters; KnnCentroidSelection" begin
+    c1 = KCenters.kcenters(L2Distance(), X, 16; sel=KnnCentroidSelection())
+    c2 = KCenters.kcenters(L2Distance(), X, 16; sel=KnnCentroidSelection(sel=MedoidSelection()))
+    c3 = KCenters.kcenters(L2Distance(), X, 16; sel=KnnCentroidSelection(sel=RandomCenterSelection()))
+    d1 = mean(c1.distances)
+    d2 = mean(c2.distances)
+    d3 = mean(c3.distances)
+    @show d1 d2 d3
+    @test abs(d1 - d2) < 0.2
+    @test abs(d1 - d3) < 0.2
+end
 
 @testset "Clustering with KCenters with an approximate index" begin
     cfft = KCenters.kcenters(L2Distance(), X, 16, recall=0.99)
     cdnet = KCenters.kcenters(L2Distance(), X, 16, initial=:dnet, recall=0.99)
     crand = KCenters.kcenters(L2Distance(), X, 16, initial=:rand, recall=0.99)
-    @show mean(cfft.distances)
-    @show mean(cdnet.distances)
-    @show mean(crand.distances)
+    d1 = mean(cfft.distances)
+    d2 = mean(cdnet.distances)
+    d3 = mean(crand.distances)
+    @show d1 d2 d3
+    @test abs(d1 - d2) < 0.2
+    @test abs(d1 - d3) < 0.2
 end

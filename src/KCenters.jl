@@ -2,9 +2,11 @@
 # License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 
 module KCenters
+using SimilaritySearch, StructTypes
 
 include("criterions.jl")
-include("fftraversal.jl")
+include("centerselection.jl")
+include("enet.jl")
 include("dnet.jl")
 include("utils.jl")
 include("clustering.jl")
