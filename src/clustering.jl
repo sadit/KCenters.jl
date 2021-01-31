@@ -24,7 +24,7 @@ The output is compatible with `kcenters` function when `eltype(y)` is Int
 function kcenters(dist::PreMetric, X::AbstractVector{T}, y::CategoricalArray, sel::AbstractCenterSelection=CentroidSelection()) where T
     m = length(levels(y))
     centers = Vector{T}(undef, m)
-    freqs = zeros(Int, m)
+    freqs = zeros(Int32, m)
     invindex = labelmap(y.refs)
     
     for i in 1:m
@@ -33,8 +33,8 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, y::CategoricalArray, se
         freqs[i] = length(elements)
     end
 
-    distances = [evaluate(dist, X[i], centers[y.refs[i]]) for i in eachindex(X)]
-    ClusteringData(centers, freqs, codes, distances, sum(distances))
+    distances = Float32[evaluate(dist, X[i], centers[y.refs[i]]) for i in eachindex(X)]
+    ClusteringData(centers, freqs, Int32.(y.refs), distances, Float32[sum(distances)])
 end
 
 """

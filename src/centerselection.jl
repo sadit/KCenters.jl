@@ -4,7 +4,12 @@
 using Random
 
 abstract type AbstractCenterSelection end
-export AbstractCenterSelection, CentroidSelection, RandomCenterSelection, MedoidSelection, KnnCentroidSelection
+export AbstractCenterSelection,
+    CentroidSelection,
+    RandomCenterSelection,
+    MedoidSelection,
+    KnnCentroidSelection,
+    center
 
 struct CentroidSelection <: AbstractCenterSelection end
 struct RandomCenterSelection <: AbstractCenterSelection end
