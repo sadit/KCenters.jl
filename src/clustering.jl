@@ -6,11 +6,13 @@ using CategoricalArrays, StatsBase, MLDataUtils
 export enet, dnet, kcenters, associate_centroids, ClusteringData
 
 struct ClusteringData{DataType<:AbstractVector}
-    centers::DataType
-    freqs::Vector{Int32}
-    codes::Vector{Int32}
-    distances::Vector{Float32}
-    err::Vector{Float32}
+    # n elements in the dataset, m centers
+    centers::DataType # centers, m entries
+    freqs::Vector{Int32} # number of elements associated to each center, m entries
+    dmax::Vector{Float32} # stores the distant element associated to each center, m entries
+    codes::Vector{Int32} # id of the associated center, n entries
+    distances::Vector{Float32} # from each element to its nearest center (label), n entries
+    err::Vector{Float32} # dynamic of the error function, at least one entry
 end
 
 StructTypes.StructType(::Type{<:ClusteringData}) = StructTypes.Struct()
@@ -34,7 +36,18 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, y::CategoricalArray, se
     end
 
     distances = Float32[evaluate(dist, X[i], centers[y.refs[i]]) for i in eachindex(X)]
-    ClusteringData(centers, freqs, Int32.(y.refs), distances, Float32[sum(distances)])
+    codes = Int32.(y.refs)
+    ClusteringData(centers, freqs, compute_dmax(m, codes, distances), codes, distances, Float32[sum(distances)])
+end
+
+function compute_dmax(m, codes, distances)
+    dmax = zeros(Float32, m)
+    for i in eachindex(codes)
+        code = codes[i]
+        d = distances[i]
+        dmax[code] = max(dmax[code], d)
+    end
+    dmax
 end
 
 """
@@ -158,7 +171,7 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractVector{T}; s
     end
     
     verbose && println(stderr, "*** finished computation of $(numcenters) references, err: $err ***")
-    ClusteringData(C, freqs, codes, distances, err)
+    ClusteringData(C, freqs, compute_dmax(numcenters, codes, distances), codes, distances, err)
 end
 
 function associate_centroids_and_compute_error!(X, index::AbstractSearchContext, codes, distances, counters)
