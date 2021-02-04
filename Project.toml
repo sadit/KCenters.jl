@@ -18,11 +18,11 @@ StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
-CategoricalArrays = "0.8.3"
+CategoricalArrays = "0.8, 0.9"
 Distances = "0.10"
 JSON3 = "1.5"
 MLDataUtils = "0.5"
 SimilaritySearch = "0.4.5"
-StatsBase = "0.32.0, 0.33"
+StatsBase = "0.32, 0.33"
 StructTypes = "1.2"
 julia = "0.7, 1"
