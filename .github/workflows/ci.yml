@@ -1,6 +1,9 @@
 name: CI
 on:
-  - push
+  - push:
+      branches:
+          - 'main'
+      tags: '*'
   - pull_request
 jobs:
   test:
@@ -19,7 +22,6 @@ jobs:
           - windows-latest
         arch:
           - x64
-          - x86
         exclude:
           - os: macOS-latest
             arch: x86
