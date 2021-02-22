@@ -1,10 +1,14 @@
 name: CI
+
 on:
-  - push:
-      branches:
-          - 'main'
-      tags: '*'
-  - pull_request
+  push:
+    branches:
+      - master
+      - develop
+      - release/.*
+    tags: '*'
+  pull_request:
+
 jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
@@ -22,6 +26,7 @@ jobs:
           - windows-latest
         arch:
           - x64
+          - x86
         exclude:
           - os: macOS-latest
             arch: x86
@@ -63,8 +68,8 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Documenter: doctest
-            using KCenters
-            doctest(KCenters)'
+            using KNCenters
+            doctest(KNCenters)'
       - run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
