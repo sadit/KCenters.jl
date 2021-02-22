@@ -5,6 +5,19 @@ using SimilaritySearch
 using CategoricalArrays, StatsBase, MLDataUtils
 export enet, dnet, kcenters, associate_centroids, ClusteringData
 
+"""
+    struct ClusteringData{DataType<:AbstractVector}
+        # n elements in the dataset, m centers
+        centers::DataType # centers, m entries
+        freqs::Vector{Int32} # number of elements associated to each center, m entries
+        dmax::Vector{Float32} # stores the distant element associated to each center, m entries
+        codes::Vector{Int32} # id of the associated center, n entries
+        distances::Vector{Float32} # from each element to its nearest center (label), n entries
+        err::Vector{Float32} # dynamic of the error function, at least one entry
+    end
+
+The datastructure output of our clustering procedures
+"""
 struct ClusteringData{DataType<:AbstractVector}
     # n elements in the dataset, m centers
     centers::DataType # centers, m entries

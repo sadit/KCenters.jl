@@ -13,7 +13,7 @@ end
 SimilaritySearch.evaluate(m::MaskedDistance, i::Integer, j::Integer) = @inbounds evaluate(m.dist, m.db[i], m.db[j])
 
 """
-    dnet(callback::Function, dist::PreMetric, X::AbstractVector{T}, k::Int) where {T}
+    dnet(callback::Function, dist::PreMetric, X::AbstractVector{T}, k::Integer) where {T}
 
 A `k`-net is a set of points `M` such that each object in `X` can be:
 - It is in `M`
@@ -25,7 +25,7 @@ The dnet function uses the `callback` function as an output mechanism. This func
 res is a `KnnResult` object (from SimilaritySearch.jl).
 
 """
-function dnet(callback::Function, dist::PreMetric, X::AbstractVector{T}, k::Int) where {T}
+function dnet(callback::Function, dist::PreMetric, X::AbstractVector{T}, k::Integer) where {T}
     N = length(X)
     metadist = (a::Int, b::Int) -> evaluate(dist, X[a], X[b])
 
@@ -63,7 +63,7 @@ end
 
 
 """
-    dnet(dist::PreMetric, X::AbstractVector{T}, numcenters::Int, knr::Int) where T
+    dnet(dist::PreMetric, X::AbstractVector{T}, numcenters::Integer) where T
 
 Selects `numcenters` far from each other based on density nets.
 
@@ -78,10 +78,10 @@ Returns a named tuple ``(nn, irefs, dmax)``.
 - `dmax` a list of coverage-radius of each center (aligned with irefs centers) smallest distance among centers
 
 """
-function dnet(dist::PreMetric, X::AbstractVector{T}, numcenters::Int; verbose=false) where T
+function dnet(dist::PreMetric, X::AbstractVector{T}, numcenters::Integer; verbose=false) where T
     # criterion = change_criterion(0.01)
     n = length(X)
-    irefs = Int[]
+    irefs = Int32[]
     dmax = Float32[]
     seq = [KnnResult(1) for i in 1:n]
 
@@ -95,7 +95,7 @@ function dnet(dist::PreMetric, X::AbstractVector{T}, numcenters::Int; verbose=fa
        verbose && println(stderr, "dnet -- selected-center: $(length(irefs)), id: $c, dmax: $(dmax[end])")
     end
     
-    dnet(callback, dist, X, floor(Int, n / numcenters))
+    dnet(callback, dist, X, floor(Int32, n / numcenters))
     #@info [length(p) for p in seq]
     #@info sort(irefs), sum([length(p) for p in seq]), length(irefs)
     (irefs=irefs, seq=seq, dmax=dmax)

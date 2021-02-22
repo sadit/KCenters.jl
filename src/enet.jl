@@ -94,9 +94,9 @@ Returns a named tuple ``(nn, irefs, dmax)``.
 - `dmax` smallest distance among centers
 
 """
-function enet(dist::PreMetric, X::AbstractVector{T}, numcenters::Int, knr::Int=1; verbose=false) where T
+function enet(dist::PreMetric, X::AbstractVector{T}, numcenters::Integer, knr::Integer=1; verbose=false) where T
     # refs = Vector{Float64}[]
-    irefs = Int[]
+    irefs = Int32[]
     nn = [KnnResult(knr) for i in 1:length(X)]
     dmax = zero(Float32)
 

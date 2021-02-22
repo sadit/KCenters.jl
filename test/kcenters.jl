@@ -2,7 +2,7 @@
 # License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 
 using Test
-using SimilaritySearch, KCenters, StatsBase, JSON3
+using Random, SimilaritySearch, KCenters, StatsBase, JSON3
 
 const X = [rand(4) for i in 1:1000]
 
@@ -35,8 +35,8 @@ end
 
 @testset "Clustering with KCenters; KnnCentroidSelection" begin
     c1 = KCenters.kcenters(L2Distance(), X, 16; sel=KnnCentroidSelection())
-    c2 = KCenters.kcenters(L2Distance(), X, 16; sel=KnnCentroidSelection(sel=MedoidSelection()))
-    c3 = KCenters.kcenters(L2Distance(), X, 16; sel=KnnCentroidSelection(sel=RandomCenterSelection()))
+    c2 = KCenters.kcenters(L2Distance(), X, 16; sel=KnnCentroidSelection(sel1=MedoidSelection()))
+    c3 = KCenters.kcenters(L2Distance(), X, 16; sel=KnnCentroidSelection(sel1=RandomCenterSelection()))
     d1 = mean(c1.distances)
     d2 = mean(c2.distances)
     d3 = mean(c3.distances)
