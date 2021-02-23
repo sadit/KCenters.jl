@@ -87,7 +87,7 @@ Selects `numcenters` far from each other based on Farthest First Traversal.
 - `numcenters` number of centers to be computed
 - `knr` number of nearest references per object (knr=1 defines a partition)
 
-Returns a named tuple ``(nn, irefs, dmax)``.
+Returns a named tuple \$(nn, irefs, dmax)\$.
 
 - `irefs` contains the list of centers (indexes to ``X``)
 - `seq` contains the ``k`` nearest references for each object in ``X`` (in ``X`` order) 

@@ -19,7 +19,7 @@ A `k`-net is a set of points `M` such that each object in `X` can be:
 - It is in `M`
 - It is in the knn set of an object in `M` (defined with the distance function `dist`)
 
-The size of `M` is determined by ``\\leftceil|X|/k\\rightceil``
+The size of `M` is determined by \$\\leftceil |X| / k \\rightceil\$
 
 The dnet function uses the `callback` function as an output mechanism. This function is called on each center as `callback(centerId, res)` where
 res is a `KnnResult` object (from SimilaritySearch.jl).
