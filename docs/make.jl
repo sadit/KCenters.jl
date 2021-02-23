@@ -13,6 +13,8 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "Density nets" => "dnet.md",
+        "Epsilon nets" => "enet.md"
     ],
 )
 
