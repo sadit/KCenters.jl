@@ -17,7 +17,8 @@ makedocs(;
         "Clustering" => "clustering.md",
         "Density nets" => "dnet.md",
         "Epsilon nets" => "enet.md",
-        "Stop criterions" => "criterions.md"
+        "Stop criterions" => "criterions.md",
+        "Partitioning function" => "utils.md"
     ],
 )
 
