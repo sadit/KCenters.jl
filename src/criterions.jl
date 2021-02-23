@@ -36,7 +36,18 @@ function fun_criterion(fun)
    (dmaxlist, database) -> length(dmaxlist) >= ceil(Int, length(database) |> fun |> round)
 end
 
+"""
+    sqrt_criterion()
+
+Stops after \$sqrt(n)\$ centers
+"""
 sqrt_criterion() = fun_criterion(sqrt)
+
+"""
+    log2_criterion()
+
+Stops after \$log_2(n)\$ centers
+"""
 log2_criterion() = fun_criterion(log2)
 
 """
