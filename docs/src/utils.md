@@ -9,9 +9,6 @@ end
 
 Helping functions for partitioning data.
 
-```@index
-```
-
 ```@docs
 partition
 knr

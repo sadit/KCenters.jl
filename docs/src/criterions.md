@@ -9,8 +9,6 @@ end
 
 The following functions create an stop criterion function of the form: `(dmaxlist, database) -> bool`. This function returns `true` whenever the caller must stop and `false` otherwise.
 
-```@index
-```
 
 ```@docs
 size_criterion

@@ -11,9 +11,6 @@ KCenters support different ways to compute or select object prototypes (centers)
 You can use them through [`center`](@ref) function; any new scheme must specialize
 from [`AbstractCenterSelection`](@ref) and specialize `center` function.
 
-```@index
-```
-
 ```@docs
 AbstractCenterSelection
 CentroidSelection

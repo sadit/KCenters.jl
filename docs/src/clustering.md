@@ -9,8 +9,6 @@ end
 
 Functions to cluster objects using distance functions and center selection schemes.
 
-```@index
-```
 
 ```@docs
 ClusteringData
