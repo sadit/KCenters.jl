@@ -68,12 +68,13 @@ end
     kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractzVector{T}; sel::AbstractCenterSelection=CentroidSelection(), maxiters=30, tol=0.001, recall=1.0) where T
 
 Performs a kcenters clustering of `X` using `dist` as distance function and `sel` to compute center objects.
-It is based on the Lloyd's algorithm yet using different algorithms as initial clusters.
-    - `:fft` the _farthest first traversal_ selects a set of farthest points among them to serve as cluster seeds.
-    - `:dnet` the _density net_ algorithm selects a set of points following the same distribution of the datasets; in contrast with a random selection, `:dnet` ensures that the selected points are not ``\\lfloor n/k \\rfloor`` nearest neighbors.
-    - `:sfft` the `:fft` over a ``k + \\log n`` random sample
-    - `:sdnet` the `:dnet` over a ``k + \\log n`` random sample
-    - `:rand` selects the set of random points along the dataset.
+It is based on the Lloyd's algorithm yet using different algorithms as initial clusters:
+
+- `:fft` the _farthest first traversal_ selects a set of farthest points among them to serve as cluster seeds.
+- `:dnet` the _density net_ algorithm selects a set of points following the same distribution of the datasets; in contrast with a random selection, `:dnet` ensures that the selected points are not ``\\lfloor n/k \\rfloor`` nearest neighbors.
+- `:sfft` the `:fft` over a ``k + \\log n`` random sample
+- `:sdnet` the `:dnet` over a ``k + \\log n`` random sample
+- `:rand` selects the set of random points along the dataset.
 
 If recall is 1.0 then an exhaustive search is made to find associations of each item to its nearest cluster; if ``0 < recall < 0`` then an approximate index
 (`SearchGraph` from `SimilaritySearch.jl`) will be used for the same purpose; the `recall` controls the expected search quality (trade with search time).
