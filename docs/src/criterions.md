@@ -17,7 +17,7 @@ size_criterion
 sqrt_criterion
 change_criterion
 fun_criterion
-log_criterion
+log2_criterion
 epsilon_criterion
 salesman_criterion
 ```
