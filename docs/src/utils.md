@@ -10,8 +10,8 @@ end
 Helping functions for partitioning data.
 
 ```@docs
-partition
 knr
 sequence
 invindex
+partition
 ```
