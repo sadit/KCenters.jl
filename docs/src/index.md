@@ -7,10 +7,7 @@ CurrentModule = KCenters
 
 ## API
 
-
 ```@index
 ```
 
-```@autodocs
-Modules = [KCenters]
 ```
