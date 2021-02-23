@@ -13,7 +13,8 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "Center selection" => "centerselection.jl",
+        "Center selection" => "centerselection.md",
+        "Clustering" => "clustering.md",
         "Density nets" => "dnet.md",
         "Epsilon nets" => "enet.md"
     ],
