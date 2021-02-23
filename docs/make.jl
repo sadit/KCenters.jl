@@ -16,7 +16,8 @@ makedocs(;
         "Center selection" => "centerselection.md",
         "Clustering" => "clustering.md",
         "Density nets" => "dnet.md",
-        "Epsilon nets" => "enet.md"
+        "Epsilon nets" => "enet.md",
+        "Stop criterions" => "criterions.md"
     ],
 )
 
