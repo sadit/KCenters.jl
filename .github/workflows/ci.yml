@@ -2,12 +2,12 @@ name: CI
 
 on:
   push:
-    branches:
+    # Sequence of patterns matched against refs/heads
+    branches:    
+      # Push events on main branch
       - main
-      - develop
-      - release/.*
+    # Sequence of patterns matched against refs/tags
     tags: '*'
-  pull_request:
 
 jobs:
   test:

@@ -178,9 +178,8 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractVector{T}; s
         
         verbose && println(stderr, "*** computing $(numcenters) nearest references ***")
         s = associate_centroids_and_compute_error!(X, create_index(C), codes, distances, freqs)
-
         push!(err, s)
-        @assert !isnan(err[end]) "ERROR invalid score $err"
+        isnan(err[end]) && error("ERROR invalid score $err")
         verbose && println(stderr, "*** new score with $(numcenters) references: $err ***")
     end
     
@@ -190,10 +189,10 @@ end
 
 function associate_centroids_and_compute_error!(X, index::AbstractSearchContext, codes, distances, counters)
     Threads.@threads for objID in 1:length(X)
+        #for objID in 1:length(X)
         res = KnnResult(1)
         search(index, X[objID], res)
-        refID = first(res).id
-        codes[objID] = refID
+        codes[objID] = first(res).id
         distances[objID] = last(res).dist
     end
 
