@@ -97,5 +97,6 @@ function center(sel::KnnCentroidSelection, lst::AbstractVector)
     c = center(sel.sel1, lst)
     seq = ExhaustiveSearch(sel.dist, lst)
     k = sel.k == 0 ? ceil(Int32, log2(length(lst))) : sel.k
+    k = max(1, k)
     center(sel.sel2, lst[[id for (id, dist) in search(seq, c, k)]])
 end
