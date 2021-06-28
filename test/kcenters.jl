@@ -2,14 +2,14 @@
 # License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 
 using Test
-using Random, SimilaritySearch, KCenters, StatsBase, JSON3
+using Random, SimilaritySearch, KCenters, StatsBase
 
 const X = [rand(4) for i in 1:1000]
 
 @testset "Clustering with enet" begin
     for i in 2:5
         p = enet(L2Distance(), X, i^2)
-        D = [first(p).dist for p in p.seq]
+        D = [minimum(p) for p in p.seq]
         @test maximum(D) <= p.dmax
     end
 end
@@ -17,7 +17,7 @@ end
 @testset "Clustering with dnet" begin
     for i in 2:5
         res = dnet(L2Distance(), X, i^2)
-        @info mean([first(p).dist for p in res.seq])
+        @info mean([minimum(p) for p in res.seq])
     end
 end
 
@@ -28,8 +28,6 @@ end
     @show mean(cfft.distances)
     @show mean(cdnet.distances)
     @show mean(crand.distances)
-
-    @test abs(mean(JSON3.read(JSON3.write(cfft), typeof(cfft)).distances) - mean(cfft.distances)) < 1e-3
 end
 
 

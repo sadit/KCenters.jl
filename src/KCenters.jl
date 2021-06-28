@@ -2,7 +2,7 @@
 # License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 
 module KCenters
-using SimilaritySearch, StructTypes
+using SimilaritySearch
 
 include("criterions.jl")
 include("centerselection.jl")

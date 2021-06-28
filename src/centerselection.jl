@@ -64,11 +64,6 @@ struct KnnCentroidSelection{S1_<:AbstractCenterSelection, S2_<:AbstractCenterSel
     k::Int32
 end
 
-StructTypes.StructType(::Type{<:CentroidSelection}) = StructTypes.Struct()
-StructTypes.StructType(::Type{<:RandomCenterSelection}) = StructTypes.Struct()
-StructTypes.StructType(::Type{<:MedoidSelection}) = StructTypes.Struct()
-StructTypes.StructType(::Type{<:KnnCentroidSelection}) = StructTypes.Struct()
-
 MedoidSelection(; dist=SqL2Distance(), ratio=0.5) = MedoidSelection(dist, convert(Float32, ratio))
 KnnCentroidSelection(; sel1=CentroidSelection(), sel2=CentroidSelection(), dist=SqL2Distance(), k=0) = KnnCentroidSelection(sel1, sel2, dist, convert(Int32, k))
 
@@ -102,5 +97,5 @@ function center(sel::KnnCentroidSelection, lst::AbstractVector)
     c = center(sel.sel1, lst)
     seq = ExhaustiveSearch(sel.dist, lst)
     k = sel.k == 0 ? ceil(Int32, log2(length(lst))) : sel.k
-    center(sel.sel2, lst[[p.id for p in search(seq, c, k)]])
+    center(sel.sel2, lst[[id for (id, dist) in search(seq, c, k)]])
 end

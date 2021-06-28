@@ -28,8 +28,6 @@ struct ClusteringData{DataType<:AbstractVector}
     err::Vector{Float32} # dynamic of the error function, at least one entry
 end
 
-StructTypes.StructType(::Type{<:ClusteringData}) = StructTypes.Struct()
-
 """
     kcenters(dist::PreMetric, X::AbstractVector{T}, y::CategoricalArray, sel::AbstractCenterSelection=CentroidSelection()) where T
 
@@ -113,9 +111,9 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, k::Integer; sel::Abstra
         C = Dict{Int, Int}()
         # D = Dict{Int, Float64}()
         for p in E.seq
-            i = first(p).id
+            i = argmin(p)
             C[i] = get(C, i, 0) + 1
-            d = last(p).dist
+            # d = maximum(p)
             # D[i] = max(get(D, i, 0.0), d)
         end
         
@@ -147,14 +145,16 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractVector{T}; s
         if recall >= 1.0
             ExhaustiveSearch(dist, CC)
         else
-            SearchGraph(dist, CC; recall=recall, automatic_optimization=true)
+            idx = SearchGraph(; dist)
+            delete!(idx.callback_list, :optimize_parameters)
+            append!(idx, CC)
         end
     end
 
     freqs = zeros(Int32, numcenters)
     codes = Vector{Int32}(undef, n)
     distances = zeros(Float32, n)
-    err = Float32[3.4e38, associate_centroids_and_compute_error!(X, create_index(C), codes, distances, freqs)]
+    err = Float32[typemax(Float32), associate_centroids_and_compute_error!(X, create_index(C), codes, distances, freqs)]
     iter = 0
 
     while iter < maxiters && err[end-1] - err[end] >= tol
@@ -192,8 +192,8 @@ function associate_centroids_and_compute_error!(X, index::AbstractSearchContext,
         #for objID in 1:length(X)
         res = KnnResult(1)
         search(index, X[objID], res)
-        codes[objID] = first(res).id
-        distances[objID] = last(res).dist
+        codes[objID] = argmin(res)
+        distances[objID] = maximum(res)
     end
 
     for refID in codes 

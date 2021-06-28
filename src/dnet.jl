@@ -38,7 +38,7 @@ function dnet(callback::Function, dist::PreMetric, X::AbstractVector{T}, k::Inte
         search(I, n, res)
         callback(I.db[n], res, I.db)
         m = n - length(res)
-        rlist = sort!([p.id for p in res])
+        rlist = sort!([id_ for (id_, dist_) in res])
         numzeros = 0
         while length(rlist) > 0
             if rlist[end] > m
@@ -87,9 +87,9 @@ function dnet(dist::PreMetric, X::AbstractVector{T}, numcenters::Integer; verbos
 
     function callback(c, res, map)
         push!(irefs, c)
-        push!(dmax, last(res).dist)
-        for p in res
-            push!(seq[map[p.id]], c, p.dist)
+        push!(dmax, maximum(res))
+        for (id, d) in res
+            push!(seq[map[id]], c, d)
         end
     
        verbose && println(stderr, "dnet -- selected-center: $(length(irefs)), id: $c, dmax: $(dmax[end])")
