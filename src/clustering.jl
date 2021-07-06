@@ -146,7 +146,7 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractVector{T}; s
             ExhaustiveSearch(dist, CC)
         else
             idx = SearchGraph(; dist)
-            delete!(idx.callback_list, :optimize_parameters)
+            delete!(idx.callbacks, :parameters)
             append!(idx, CC)
         end
     end
