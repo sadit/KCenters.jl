@@ -9,7 +9,7 @@ function _ignore3(a, b, c)
 end
 
 """
-    fftraversal(callback::Function, dist::PreMetric, X::AbstractVector{T}, stop, callbackdist=_ignore3) where {T}
+    fftraversal(callback::Function, dist::PreMetric, X::AbstractDatabase, stop, callbackdist=_ignore3)
 
 Selects a number of farthest points in `X`, using a farthest first traversal
 
@@ -22,17 +22,14 @@ Selects a number of farthest points in `X`, using a farthest first traversal
 - The callbackdist function is called on each distance evaluation between pivots and items in the dataset
     `callbackdist(index-pivot, index-item, distance)`
 """
-function fftraversal(callback::Function, dist::PreMetric, X::AbstractVector{T}, stop, callbackdist=_ignore3) where {T}
+function fftraversal(callback::Function, dist::PreMetric, X::AbstractDatabase, stop, callbackdist=_ignore3)
     N = length(X)
     D = Vector{Float64}(undef, N)
     dmaxlist = Float64[]
     dset = [typemax(Float64) for i in 1:N]
     imax::Int = rand(1:N)
     dmax::Float64 = typemax(Float64)
-    if N == 0
-        return
-    end
-
+    N == 0 && return
     k::Int = 0
     
     @inbounds while k <= N
@@ -78,7 +75,7 @@ end
 
 
 """
-    enet(dist::PreMetric, X::AbstractVector{T}, numcenters::Int, knr::Int=1; verbose=false) where T
+    enet(dist::PreMetric, X::AbstractDatabase, numcenters::Int, knr::Int=1; verbose=false) where T
 
 Selects `numcenters` far from each other based on Farthest First Traversal.
 
@@ -94,7 +91,7 @@ Returns a named tuple \$(nn, irefs, dmax)\$.
 - `dmax` smallest distance among centers
 
 """
-function enet(dist::PreMetric, X::AbstractVector{T}, numcenters::Integer, knr::Integer=1; verbose=false) where T
+function enet(dist::PreMetric, X::AbstractDatabase, numcenters::Integer, knr::Integer=1; verbose=false) where T
     # refs = Vector{Float64}[]
     irefs = Int32[]
     nn = [KnnResult(knr) for i in 1:length(X)]

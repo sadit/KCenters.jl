@@ -6,7 +6,7 @@ using CategoricalArrays, StatsBase, MLDataUtils
 export enet, dnet, kcenters, associate_centroids, ClusteringData
 
 """
-    struct ClusteringData{DataType<:AbstractVector}
+    struct ClusteringData{DataType}
         # n elements in the dataset, m centers
         centers::DataType # centers, m entries
         freqs::Vector{Int32} # number of elements associated to each center, m entries
@@ -18,7 +18,7 @@ export enet, dnet, kcenters, associate_centroids, ClusteringData
 
 The datastructure output of our clustering procedures
 """
-struct ClusteringData{DataType<:AbstractVector}
+struct ClusteringData{DataType<:AbstractDatabase}
     # n elements in the dataset, m centers
     centers::DataType # centers, m entries
     freqs::Vector{Int32} # number of elements associated to each center, m entries
@@ -29,14 +29,15 @@ struct ClusteringData{DataType<:AbstractVector}
 end
 
 """
-    kcenters(dist::PreMetric, X::AbstractVector{T}, y::CategoricalArray, sel::AbstractCenterSelection=CentroidSelection()) where T
+    kcenters(dist::PreMetric, X, y::CategoricalArray, sel::AbstractCenterSelection=CentroidSelection())
 
 Computes a center per region (each region is defined by the set of items having the same label in `y`).
 The output is compatible with `kcenters` function when `eltype(y)` is Int
 """
-function kcenters(dist::PreMetric, X::AbstractVector{T}, y::CategoricalArray, sel::AbstractCenterSelection=CentroidSelection()) where T
+function kcenters(dist::PreMetric, X, y::CategoricalArray, sel::AbstractCenterSelection=CentroidSelection())
+    X = convert(AbstractDatabase, X)
     m = length(levels(y))
-    centers = Vector{T}(undef, m)
+    centers = Vector(undef, m)
     freqs = zeros(Int32, m)
     invindex = labelmap(y.refs)
     
@@ -46,9 +47,11 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, y::CategoricalArray, se
         freqs[i] = length(elements)
     end
 
-    distances = Float32[evaluate(dist, X[i], centers[y.refs[i]]) for i in eachindex(X)]
-    codes = Int32.(y.refs)
-    ClusteringData(centers, freqs, compute_dmax(m, codes, distances), codes, distances, Float32[sum(distances)])
+    let centers = VectorDatabase(centers)
+        distances = Float32[evaluate(dist, X[i], centers[y.refs[i]]) for i in eachindex(X)]
+        codes = Int32.(y.refs)
+        ClusteringData(centers, freqs, compute_dmax(m, codes, distances), codes, distances, Float32[sum(distances)])
+    end
 end
 
 function compute_dmax(m, codes, distances)
@@ -62,8 +65,8 @@ function compute_dmax(m, codes, distances)
 end
 
 """
-    kcenters(dist::PreMetric, X::AbstractVector{T}, k::Integer; sel::AbstractCenterSelection=CentroidSelection(), initial=:fft, maxiters=0, tol=0.001, recall=1.0) where T
-    kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractzVector{T}; sel::AbstractCenterSelection=CentroidSelection(), maxiters=30, tol=0.001, recall=1.0) where T
+    kcenters(dist::PreMetric, X, k::Integer; sel::AbstractCenterSelection=CentroidSelection(), initial=:fft, maxiters=0, tol=0.001, recall=1.0)
+    kcenters(dist::PreMetric, X, C; sel::AbstractCenterSelection=CentroidSelection(), maxiters=30, tol=0.001, recall=1.0)
 
 Performs a kcenters clustering of `X` using `dist` as distance function and `sel` to compute center objects.
 It is based on the Lloyd's algorithm yet using different algorithms as initial clusters:
@@ -77,32 +80,34 @@ It is based on the Lloyd's algorithm yet using different algorithms as initial c
 If recall is 1.0 then an exhaustive search is made to find associations of each item to its nearest cluster; if ``0 < recall < 0`` then an approximate index
 (`SearchGraph` from `SimilaritySearch.jl`) will be used for the same purpose; the `recall` controls the expected search quality (trade with search time).
 """
-function kcenters(dist::PreMetric, X::AbstractVector{T}, k::Integer; sel::AbstractCenterSelection=CentroidSelection(), initial=:fft, maxiters=10, tol=0.001, recall=1.0, verbose=false) where T
-    if initial == :fft
+function kcenters(dist::PreMetric, X, k::Integer; sel::AbstractCenterSelection=CentroidSelection(), initial=:fft, maxiters=10, tol=0.001, recall=1.0, verbose=false)
+    X = convert(AbstractDatabase, X)
+
+    if initial === :fft
         m = 0
         irefs = enet(dist, X, k+m).irefs
         if m > 0
             irefs = irefs[1+m:end]
         end
         initial = X[irefs]
-    elseif initial == :dnet
+    elseif initial === :dnet
         irefs = dnet(dist, X, k).irefs
         resize!(irefs, k)
         initial = X[irefs]
-    elseif initial == :sfft
+    elseif initial === :sfft
         n = length(X)
         m = min(n, ceil(Int, sqrt(n)) + k)
         X_ = X[unique(rand(1:n, m))]
         C = enet(dist, X_, k, verbose=verbose)
         initial = X_[C.irefs]
-    elseif initial == :sdnet
+    elseif initial === :sdnet
         n = length(X)
         m = min(n, ceil(Int, sqrt(n)) + k)
         X_ = X[unique(rand(1:n, m))]
         irefs = dnet(dist, X_, k, verbose=verbose).irefs
         resize!(irefs, k)
         initial = X_[irefs]
-    elseif initial == :fftdensity
+    elseif initial === :fftdensity
         n = length(X)
         m = min(n, ceil(Int, log(n)) + 2 * k)
 
@@ -121,18 +126,16 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, k::Integer; sel::Abstra
         XX = X[irefs]
         C = enet(dist, XX, k)
         initial = XX[C.irefs]
-    elseif initial == :rand
+    elseif initial === :rand
         initial = rand(X, k)
     elseif initial isa Symbol
         error("Unknown kind of initial value $initial")
-    else
-        initial = initial::AbstractVector{T}
     end
 
-    kcenters(dist, X, initial, sel=sel, maxiters=maxiters, tol=tol, recall=recall, verbose=verbose)
+    kcenters_(dist, X, initial, sel=sel, maxiters=maxiters, tol=tol, recall=recall, verbose=verbose)
 end
 
-function kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractVector{T}; sel::AbstractCenterSelection=CentroidSelection(), maxiters=-1, tol=0.001, recall=1.0, verbose=true) where T
+function kcenters_(dist::PreMetric, X::AbstractDatabase, C; sel::AbstractCenterSelection=CentroidSelection(), maxiters=-1, tol=0.001, recall=1.0, verbose=true)
     # Lloyd's algoritm
     n = length(X)
     numcenters = length(C)
@@ -142,11 +145,12 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractVector{T}; s
     end
 
     function create_index(CC)
+        CC = convert(AbstractDatabase, CC)
         if recall >= 1.0
             ExhaustiveSearch(dist, CC)
         else
-            idx = SearchGraph(; dist)
-            append!(idx, CC)
+            idx = SearchGraph(; db=CC, dist)
+            index!(idx)
         end
     end
 
@@ -155,11 +159,15 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractVector{T}; s
     distances = zeros(Float32, n)
     err = Float32[typemax(Float32), associate_centroids_and_compute_error!(X, create_index(C), codes, distances, freqs)]
     iter = 0
-
+    CC = C
+    clusters = [Int[] for i in 1:numcenters]
     while iter < maxiters && err[end-1] - err[end] >= tol
         iter += 1
         verbose && println(stderr, "*** starting iteration: $iter; err: $err ***")
-        clusters = [Int[] for i in 1:numcenters]
+        for c in clusters
+            empty!(c)
+        end
+
         for (objID, plist) in enumerate(codes)
             for refID in plist
                 push!(clusters[refID], objID)
@@ -167,28 +175,29 @@ function kcenters(dist::PreMetric, X::AbstractVector{T}, C::AbstractVector{T}; s
         end
         
         verbose && println(stderr, "*** computing centroids ***")
+        resize!(CC, length(clusters))
         Threads.@threads for i in 1:length(clusters)
             plist = clusters[i]
-            # C[i] can be empty because we could be using approximate search
+            # CC[i] can be empty because we could be using approximate search
             if length(plist) > 0
-                C[i] = center(sel, X[plist])
+                c = center(sel, X[plist])
+                CC[i] = c
             end
         end
         
         verbose && println(stderr, "*** computing $(numcenters) nearest references ***")
-        s = associate_centroids_and_compute_error!(X, create_index(C), codes, distances, freqs)
+        s = associate_centroids_and_compute_error!(X, create_index(CC), codes, distances, freqs)
         push!(err, s)
         isnan(err[end]) && error("ERROR invalid score $err")
         verbose && println(stderr, "*** new score with $(numcenters) references: $err ***")
     end
     
     verbose && println(stderr, "*** finished computation of $(numcenters) references, err: $err ***")
-    ClusteringData(C, freqs, compute_dmax(numcenters, codes, distances), codes, distances, err)
+    ClusteringData(VectorDatabase(CC), freqs, compute_dmax(numcenters, codes, distances), codes, distances, err)
 end
 
 function associate_centroids_and_compute_error!(X, index::AbstractSearchContext, codes, distances, counters)
     Threads.@threads for objID in 1:length(X)
-        #for objID in 1:length(X)
         res = KnnResult(1)
         search(index, X[objID], res)
         codes[objID] = argmin(res)

@@ -4,7 +4,7 @@
 using Test
 using Random, SimilaritySearch, KCenters, StatsBase
 
-const X = [rand(4) for i in 1:1000]
+const X = MatrixDatabase(rand(Float32, 4, 10000))
 
 @testset "Clustering with enet" begin
     for i in 2:5

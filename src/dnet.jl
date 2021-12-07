@@ -5,15 +5,8 @@ using SimilaritySearch
 using Random
 export dnet
 
-struct MaskedDistance{DataType<:AbstractVector,DistType<:PreMetric} <: PreMetric
-    dist::DistType
-    db::DataType
-end
-
-SimilaritySearch.evaluate(m::MaskedDistance, i::Integer, j::Integer) = @inbounds evaluate(m.dist, m.db[i], m.db[j])
-
 """
-    dnet(callback::Function, dist::PreMetric, X::AbstractVector{T}, k::Integer) where {T}
+    dnet(callback::Function, dist::PreMetric, X::AbstractDatabase, k::Integer)
 
 A `k`-net is a set of points `M` such that each object in `X` can be:
 - It is in `M`
@@ -21,28 +14,27 @@ A `k`-net is a set of points `M` such that each object in `X` can be:
 
 The size of `M` is determined by \$\\leftceil |X| / k \\rightceil\$
 
-The dnet function uses the `callback` function as an output mechanism. This function is called on each center as `callback(centerId, res)` where
-res is a `KnnResult` object (from SimilaritySearch.jl).
+The dnet function uses the `callback` function as an output mechanism. This function is called on each center as `callback(centerId, res, dbmap)` where
+res is a `KnnResult` object (from SimilaritySearch.jl) and dbmap a mapping 
 
 """
-function dnet(callback::Function, dist::PreMetric, X::AbstractVector{T}, k::Integer) where {T}
+function dnet(callback::Function, dist::PreMetric, X::AbstractDatabase, k::Integer)
     N = length(X)
-    metadist = (a::Int, b::Int) -> evaluate(dist, X[a], X[b])
-
-    I = ExhaustiveSearch(MaskedDistance(dist, X), shuffle!(collect(1:N)))
+    S = SubDatabase(X, shuffle!(collect(1:N)))
+    I = ExhaustiveSearch(dist, S)
     res = KnnResult(k)
 
-    while length(I.db) > 0
+    while length(I) > 0
         empty!(res)
-        n = length(I.db)
-        search(I, n, res)
-        callback(I.db[n], res, I.db)
+        n = length(I)
+        search(I, I[n], res)
+        callback(S.map[n], res, S.map)
         m = n - length(res)
         rlist = sort!([id_ for (id_, dist_) in res])
         numzeros = 0
         while length(rlist) > 0
             if rlist[end] > m
-                I.db[rlist[end]] = 0
+                S.map[rlist[end]] = 0
                 pop!(rlist)
                 numzeros += 1
             else
@@ -50,20 +42,20 @@ function dnet(callback::Function, dist::PreMetric, X::AbstractVector{T}, k::Inte
             end
         end
 
-        E = @view I.db[m+1:end]
+        E = @view S.map[m+1:end]
         sort!(E)
-        E = @view I.db[m+1+numzeros:end]
+        E = @view S.map[m+1+numzeros:end]
         if length(E) > 0
-            I.db[rlist] .= E
+            S.map[rlist] .= E
         end
 
-        resize!(I.db, m)
+        resize!(S.map, m)
     end
 end
 
 
 """
-    dnet(dist::PreMetric, X::AbstractVector{T}, numcenters::Integer) where T
+    dnet(dist::PreMetric, X::AbstractDatabase, numcenters::Integer)
 
 Selects `numcenters` far from each other based on density nets.
 
@@ -78,7 +70,7 @@ Returns a named tuple ``(nn, irefs, dmax)``.
 - `dmax` a list of coverage-radius of each center (aligned with irefs centers) smallest distance among centers
 
 """
-function dnet(dist::PreMetric, X::AbstractVector{T}, numcenters::Integer; verbose=false) where T
+function dnet(dist::PreMetric, X::AbstractDatabase, numcenters::Integer; verbose=false)
     # criterion = change_criterion(0.01)
     n = length(X)
     irefs = Int32[]
