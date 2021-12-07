@@ -159,7 +159,7 @@ function kcenters_(dist::PreMetric, X::AbstractDatabase, C; sel::AbstractCenterS
     distances = zeros(Float32, n)
     err = Float32[typemax(Float32), associate_centroids_and_compute_error!(X, create_index(C), codes, distances, freqs)]
     iter = 0
-    CC = C
+    CC = Vector{Any}(C)
     clusters = [Int[] for i in 1:numcenters]
     while iter < maxiters && err[end-1] - err[end] >= tol
         iter += 1
@@ -193,7 +193,7 @@ function kcenters_(dist::PreMetric, X::AbstractDatabase, C; sel::AbstractCenterS
     end
     
     verbose && println(stderr, "*** finished computation of $(numcenters) references, err: $err ***")
-    ClusteringData(VectorDatabase(CC), freqs, compute_dmax(numcenters, codes, distances), codes, distances, err)
+    ClusteringData(convert(AbstractDatabase, CC), freqs, compute_dmax(numcenters, codes, distances), codes, distances, err)
 end
 
 function associate_centroids_and_compute_error!(X, index::AbstractSearchContext, codes, distances, counters)
