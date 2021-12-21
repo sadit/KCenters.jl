@@ -9,7 +9,7 @@ const X = MatrixDatabase(rand(Float32, 4, 10000))
 @testset "Clustering with enet" begin
     for i in 2:5
         p = enet(L2Distance(), X, i^2)
-        D = [minimum(p) for p in p.seq]
+        D = minimum.(p.seq)
         @test maximum(D) <= p.dmax
     end
 end

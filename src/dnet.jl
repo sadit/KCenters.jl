@@ -6,7 +6,7 @@ using Random
 export dnet
 
 """
-    dnet(callback::Function, dist::PreMetric, X::AbstractDatabase, k::Integer)
+    dnet(callback::Function, dist::SemiMetric, X::AbstractDatabase, k::Integer)
 
 A `k`-net is a set of points `M` such that each object in `X` can be:
 - It is in `M`
@@ -18,19 +18,20 @@ The dnet function uses the `callback` function as an output mechanism. This func
 res is a `KnnResult` object (from SimilaritySearch.jl) and dbmap a mapping 
 
 """
-function dnet(callback::Function, dist::PreMetric, X::AbstractDatabase, k::Integer)
+function dnet(callback::Function, dist::SemiMetric, X::AbstractDatabase, k::Integer)
     N = length(X)
     S = SubDatabase(X, shuffle!(collect(1:N)))
     I = ExhaustiveSearch(dist, S)
     res = KnnResult(k)
-
+    rlist = Int32[]
     while length(I) > 0
-        empty!(res)
         n = length(I)
-        search(I, I[n], res)
-        callback(S.map[n], res, S.map)
-        m = n - length(res)
-        rlist = sort!([id_ for (id_, dist_) in res])
+        p = search(I, I[n], reuse!(res, k))
+        callback(S.map[n], p.res, S.map)
+        m = n - length(p.res, p.st)
+        empty!(rlist)
+        append!(rlist, idview(res, p.st))
+        sort!(rlist)
         numzeros = 0
         while length(rlist) > 0
             if rlist[end] > m
@@ -55,7 +56,7 @@ end
 
 
 """
-    dnet(dist::PreMetric, X::AbstractDatabase, numcenters::Integer)
+    dnet(dist::SemiMetric, X::AbstractDatabase, numcenters::Integer)
 
 Selects `numcenters` far from each other based on density nets.
 
@@ -70,24 +71,27 @@ Returns a named tuple ``(nn, irefs, dmax)``.
 - `dmax` a list of coverage-radius of each center (aligned with irefs centers) smallest distance among centers
 
 """
-function dnet(dist::PreMetric, X::AbstractDatabase, numcenters::Integer; verbose=false)
+function dnet(dist::SemiMetric, X::AbstractDatabase, numcenters::Integer; verbose=false)
     # criterion = change_criterion(0.01)
     n = length(X)
     irefs = Int32[]
     dmax = Float32[]
-    seq = [KnnResult(1) for i in 1:n]
-
+    seq = [KnnResult(1) for _ in 1:n]
+    
     function callback(c, res, map)
         push!(irefs, c)
         push!(dmax, maximum(res))
+        
         for (id, d) in res
-            push!(seq[map[id]], c, d)
+            s = seq[map[id]]
+            push!(s, initialstate(s), c, d)
         end
     
-       verbose && println(stderr, "dnet -- selected-center: $(length(irefs)), id: $c, dmax: $(dmax[end])")
+        verbose && println(stderr, "dnet -- selected-center: $(length(irefs)), id: $c, dmax: $(dmax[end])")
     end
     
-    dnet(callback, dist, X, floor(Int32, n / numcenters))
+
+    dnet(callback, dist, X, n ÷ numcenters)
     #@info [length(p) for p in seq]
     #@info sort(irefs), sum([length(p) for p in seq]), length(irefs)
     (irefs=irefs, seq=seq, dmax=dmax)

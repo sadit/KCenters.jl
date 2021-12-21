@@ -9,7 +9,7 @@ function _ignore3(a, b, c)
 end
 
 """
-    fftraversal(callback::Function, dist::PreMetric, X::AbstractDatabase, stop, callbackdist=_ignore3)
+    fftraversal(callback::Function, dist::SemiMetric, X::AbstractDatabase, stop, callbackdist=_ignore3)
 
 Selects a number of farthest points in `X`, using a farthest first traversal
 
@@ -22,7 +22,7 @@ Selects a number of farthest points in `X`, using a farthest first traversal
 - The callbackdist function is called on each distance evaluation between pivots and items in the dataset
     `callbackdist(index-pivot, index-item, distance)`
 """
-function fftraversal(callback::Function, dist::PreMetric, X::AbstractDatabase, stop, callbackdist=_ignore3)
+function fftraversal(callback::Function, dist::SemiMetric, X::AbstractDatabase, stop, callbackdist=_ignore3)
     N = length(X)
     D = Vector{Float64}(undef, N)
     dmaxlist = Float64[]
@@ -75,7 +75,7 @@ end
 
 
 """
-    enet(dist::PreMetric, X::AbstractDatabase, numcenters::Int, knr::Int=1; verbose=false) where T
+    enet(dist::SemiMetric, X::AbstractDatabase, numcenters::Int, knr::Int=1; verbose=false) where T
 
 Selects `numcenters` far from each other based on Farthest First Traversal.
 
@@ -91,10 +91,10 @@ Returns a named tuple \$(nn, irefs, dmax)\$.
 - `dmax` smallest distance among centers
 
 """
-function enet(dist::PreMetric, X::AbstractDatabase, numcenters::Integer, knr::Integer=1; verbose=false) where T
+function enet(dist::SemiMetric, X::AbstractDatabase, numcenters::Integer, knr::Integer=1; verbose=false) where T
     # refs = Vector{Float64}[]
     irefs = Int32[]
-    nn = [KnnResult(knr) for i in 1:length(X)]
+    nn = [KnnResult(knr) for _ in 1:length(X)]
     dmax = zero(Float32)
 
     function callback(c, _dmax)
@@ -104,7 +104,9 @@ function enet(dist::PreMetric, X::AbstractDatabase, numcenters::Integer, knr::In
     end
 
     function capturenn(i, refID, d)
-        push!(nn[i], refID, d)
+        @inbounds res = nn[i]
+        st = initialstate(res) # we are using KnnResult objects that use st to support fast popshift! (not used here)
+        @inbounds push!(res, st, refID, d)
     end
 
     fftraversal(callback, dist, X, size_criterion(numcenters), capturenn)
