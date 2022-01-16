@@ -105,8 +105,7 @@ function enet(dist::SemiMetric, X::AbstractDatabase, numcenters::Integer, knr::I
 
     function capturenn(i, refID, d)
         @inbounds res = nn[i]
-        st = initialstate(res) # we are using KnnResult objects that use st to support fast popshift! (not used here)
-        @inbounds push!(res, st, refID, d)
+        @inbounds push!(res, refID, d)
     end
 
     fftraversal(callback, dist, X, size_criterion(numcenters), capturenn)

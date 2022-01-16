@@ -28,9 +28,9 @@ function dnet(callback::Function, dist::SemiMetric, X::AbstractDatabase, k::Inte
         n = length(I)
         p = search(I, I[n], reuse!(res, k))
         callback(S.map[n], p.res, S.map)
-        m = n - length(p.res, p.st)
+        m = n - length(p.res)
         empty!(rlist)
-        append!(rlist, idview(res, p.st))
+        append!(rlist, idview(res))
         sort!(rlist)
         numzeros = 0
         while length(rlist) > 0
@@ -84,7 +84,7 @@ function dnet(dist::SemiMetric, X::AbstractDatabase, numcenters::Integer; verbos
         
         for (id, d) in res
             s = seq[map[id]]
-            push!(s, initialstate(s), c, d)
+            push!(s, c, d)
         end
     
         verbose && println(stderr, "dnet -- selected-center: $(length(irefs)), id: $c, dmax: $(dmax[end])")
