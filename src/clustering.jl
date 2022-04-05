@@ -1,5 +1,4 @@
 # This file is a part of KCenters.jl
-# License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 
 using SimilaritySearch
 using CategoricalArrays, StatsBase, MLDataUtils
@@ -34,8 +33,7 @@ end
 Computes a center per region (each region is defined by the set of items having the same label in `y`).
 The output is compatible with `kcenters` function when `eltype(y)` is Int
 """
-function kcenters(dist::SemiMetric, X, y::CategoricalArray, sel::AbstractCenterSelection=CentroidSelection())
-    X = convert(AbstractDatabase, X)
+function kcenters(dist::SemiMetric, X::AbstractDatabase, y::CategoricalArray, sel::AbstractCenterSelection=CentroidSelection())
     m = length(levels(y))
     centers = Vector(undef, m)
     freqs = zeros(Int32, m)
@@ -78,16 +76,9 @@ It is based on the Lloyd's algorithm yet using different algorithms as initial c
 If recall is 1.0 then an exhaustive search is made to find associations of each item to its nearest cluster; if ``0 < recall < 0`` then an approximate index
 (`SearchGraph` from `SimilaritySearch.jl`) will be used for the same purpose; the `recall` controls the expected search quality (trade with search time).
 """
-function kcenters(dist::SemiMetric, X, k::Integer; sel::AbstractCenterSelection=CentroidSelection(), initial=:fft, maxiters=10, tol=0.001, recall=1.0, verbose=false)
-    X = convert(AbstractDatabase, X)
-
+function kcenters(dist::SemiMetric, X::AbstractDatabase, k::Integer; sel::AbstractCenterSelection=CentroidSelection(), initial=:fft, maxiters=10, tol=0.001, recall=1.0, verbose=false)
     if initial === :fft
-        m = 0
-        irefs = enet(dist, X, k+m).irefs
-        if m > 0
-            irefs = irefs[1+m:end]
-        end
-
+        irefs = enet(dist, X, k).irefs
         initial = SubDatabase(X, irefs)
     elseif initial === :dnet
         irefs = dnet(dist, X, k).irefs
@@ -102,7 +93,7 @@ function kcenters(dist::SemiMetric, X, k::Integer; sel::AbstractCenterSelection=
     kcenters_(dist, X, initial, sel=sel, maxiters=maxiters, tol=tol, recall=recall, verbose=verbose)
 end
 
-function kcenters_(dist::SemiMetric, X::AbstractDatabase, C; sel::AbstractCenterSelection=CentroidSelection(), maxiters=-1, tol=0.001, recall=1.0, verbose=true)
+function kcenters_(dist::SemiMetric, X::AbstractDatabase, C::AbstractDatabase; sel::AbstractCenterSelection=CentroidSelection(), maxiters=-1, tol=0.001, recall=1.0, verbose=true)
     # Lloyd's algoritm
     n = length(X)
     numcenters = length(C)
@@ -112,7 +103,6 @@ function kcenters_(dist::SemiMetric, X::AbstractDatabase, C; sel::AbstractCenter
     end
 
     function create_index(CC)
-        CC = convert(AbstractDatabase, CC)
         if recall >= 1.0
             ExhaustiveSearch(dist, CC)
         else
@@ -126,9 +116,9 @@ function kcenters_(dist::SemiMetric, X::AbstractDatabase, C; sel::AbstractCenter
     distances = zeros(Float32, n)
     err = Float32[typemax(Float32), associate_centroids_and_compute_error!(X, create_index(C), codes, distances, freqs)]
     iter = 0
-    CC = Any[c for c in C]
+    CC = VectorDatabase(C)
     clusters = [Int[] for i in 1:numcenters]
-    while iter < maxiters && err[end-1] - err[end] >= tol
+    while iter < maxiters && abs(err[end-1] - err[end]) >= tol
         iter += 1
         verbose && println(stderr, "*** starting iteration: $iter; err: $err ***")
         for c in clusters
@@ -142,7 +132,7 @@ function kcenters_(dist::SemiMetric, X::AbstractDatabase, C; sel::AbstractCenter
         end
         
         verbose && println(stderr, "*** computing centroids ***")
-        resize!(CC, length(clusters))
+               
         Threads.@threads for i in 1:length(clusters)
             plist = clusters[i]
             # CC[i] can be empty because we could be using approximate search
@@ -160,12 +150,13 @@ function kcenters_(dist::SemiMetric, X::AbstractDatabase, C; sel::AbstractCenter
     end
     
     verbose && println(stderr, "*** finished computation of $(numcenters) references, err: $err ***")
-    ClusteringData(convert(AbstractDatabase, CC), freqs, compute_dmax(numcenters, codes, distances), codes, distances, err)
+    ClusteringData(CC, freqs, compute_dmax(numcenters, codes, distances), codes, distances, err)
 end
 
 function associate_centroids_and_compute_error!(X, index::AbstractSearchContext, codes, distances, counters)
+    pools = SimilaritySearch.getpools(index)
     Threads.@threads for objID in 1:length(X)
-        res = KnnResult(1)
+        res = SimilaritySearch.getknnresult(1, pools)
         search(index, X[objID], res)
         codes[objID] = argmin(res)
         distances[objID] = maximum(res)
