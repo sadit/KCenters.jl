@@ -7,7 +7,7 @@ makedocs(;
     repo="https://github.com/sadit/KCenters.jl/blob/{commit}{path}#L{line}",
     sitename="KCenters.jl",
     format=Documenter.HTML(;
-        prettyurls=get(ENV, "CI", "false") == "true",
+        prettyurls=get(ENV, "CI", nothing) == "true",
         canonical="https://sadit.github.io/KCenters.jl",
         assets=String[],
     ),
@@ -24,7 +24,7 @@ makedocs(;
 
 deploydocs(;
     repo="github.com/sadit/KCenters.jl",
-    devbranch="main",
+    devbranch=nothing,
     branch = "gh-pages",
-    versions = ["stable" => "v^", "v#.#"]
+    versions = ["stable" => "v^", "v#.#.#", "dev" => "dev"]
 )
