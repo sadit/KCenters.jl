@@ -20,7 +20,7 @@ res is a `KnnResult` object (from SimilaritySearch.jl) and dbmap a mapping
 function dnet(callback::Function, dist::SemiMetric, X::AbstractDatabase, k::Integer)
     N = length(X)
     S = SubDatabase(X, shuffle!(collect(1:N)))
-    I = ExhaustiveSearch(dist, S)
+    I = ParallelExhaustiveSearch(dist, S)
     res = KnnResult(k)
     rlist = Int32[]
     while length(I) > 0
