@@ -1,7 +1,8 @@
 # This file is a part of KCenters.jl
 
 module KCenters
-using SimilaritySearch
+using SimilaritySearch, Polyester
+using SimilaritySearch: getminbatch, getknnresult, getpools
 
 include("criterions.jl")
 include("centerselection.jl")

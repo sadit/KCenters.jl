@@ -25,7 +25,7 @@ function enet(dist::SemiMetric, X::AbstractDatabase, stop::Function; verbose=tru
         verbose && println(stderr, "computing fartest point $(length(imaxlist)), dmax: $dmax, imax: $imax, n: $(length(X))")
 
         @inbounds pivot = X[imax]
-        Threads.@threads for i in 1:N
+        @batch minbatch=getminbatch(0, N) for i in 1:N
             @inbounds d = evaluate(dist, X[i], pivot)
             @inbounds nndist[i] = min(nndist[i], d)
         end

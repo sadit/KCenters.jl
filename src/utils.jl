@@ -3,7 +3,7 @@
 export partition, knr, sequence, invindex
 
 """
-    partition(callback::Function, objects::AbstractVector{T}, refs::AbstractSearchContext; k::Int=1) where T
+    partition(callback::Function, objects::AbstractVector{T}, refs::AbstractSearchIndex; k::Int=1) where T
 
 Groups items in `objects` using a nearest neighbor rule over `refs`.
 The output is controlled using a callback function. The call is performed in `objects` order.
@@ -19,7 +19,7 @@ The output is controlled using a callback function. The call is performed in `ob
 Please note that each object can be related to more than one group ``k > 1`` (default ``k=1``).
 
 """
-function partition(callback::Function, objects::AbstractVector{T}, refs::AbstractSearchContext; k::Int=1) where T
+function partition(callback::Function, objects::AbstractVector{T}, refs::AbstractSearchIndex; k::Int=1) where T
     res = KnnResult(k)
     for i in 1:length(objects)
         empty!(res)
@@ -28,15 +28,15 @@ function partition(callback::Function, objects::AbstractVector{T}, refs::Abstrac
 end
 
 """
-    invindex(objects::AbstractVector{T}, refs::AbstractSearchContext; k::Int=1) where T
+    invindex(objects::AbstractVector{T}, refs::AbstractSearchIndex; k::Int=1) where T
 
 Creates an inverted index from references to objects.
 So, an object ``u`` is in ``r``'s posting list iff ``r``
 is among the ``k`` nearest references of ``u``.
 
 """
-function invindex(objects::AbstractVector{T}, refs::AbstractSearchContext; k::Int=1) where T
-    π = [Vector{Int}() for i in 1:length(refs.db)]
+function invindex(objects::AbstractVector{T}, refs::AbstractSearchIndex; k::Int=1) where T
+    π = [Vector{Int}() for _ in 1:length(refs.db)]
     # partition((i, p) -> push!(π[p.id], i), dist, objects, refs, k=k)
     partition(objects, refs, k=k) do i, res
         for p in res
@@ -47,11 +47,11 @@ function invindex(objects::AbstractVector{T}, refs::AbstractSearchContext; k::In
 end
 
 """
-    sequence(objects::AbstractVector{T}, refs::AbstractSearchContext) where T
+    sequence(objects::AbstractVector{T}, refs::AbstractSearchIndex) where T
 
 Computes the nearest reference of each item in the dataset and return it as a sequence of identifiers
 """
-function sequence(objects::AbstractVector{T}, refs::AbstractSearchContext) where T
+function sequence(objects::AbstractVector{T}, refs::AbstractSearchIndex) where T
     s = Vector{Int}(undef, length(objects))
     partition(objects, refs) do i, res
         s[i] = first(res).id
@@ -60,11 +60,11 @@ function sequence(objects::AbstractVector{T}, refs::AbstractSearchContext) where
 end
 
 """
-    knr(objects::AbstractVector{T}, refs::AbstractSearchContext) where T
+    knr(objects::AbstractVector{T}, refs::AbstractSearchIndex) where T
 
 Computes an array of k-nearest neighbors for `objects`
 """
-function knr(objects::AbstractVector{T}, refs::AbstractSearchContext) where T
+function knr(objects::AbstractVector{T}, refs::AbstractSearchIndex) where T
     s = Vector{Vector{Int}}(undef, length(objects))
     partition(objects, refs) do i, res
         s[i] = [p.id for p in res]

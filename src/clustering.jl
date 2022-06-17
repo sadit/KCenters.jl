@@ -132,8 +132,7 @@ function kcenters_(dist::SemiMetric, X::AbstractDatabase, C::AbstractDatabase; s
         end
         
         verbose && println(stderr, "*** computing centroids ***")
-               
-        Threads.@threads for i in 1:length(clusters)
+        @batch minbatch=getminbatch(0, length(clusters)) for i in 1:length(clusters)
             plist = clusters[i]
             # CC[i] can be empty because we could be using approximate search
             if length(plist) > 0
@@ -153,11 +152,12 @@ function kcenters_(dist::SemiMetric, X::AbstractDatabase, C::AbstractDatabase; s
     ClusteringData(CC, freqs, compute_dmax(numcenters, codes, distances), codes, distances, err)
 end
 
-function associate_centroids_and_compute_error!(X, index::AbstractSearchContext, codes, distances, counters)
-    pools = SimilaritySearch.getpools(index)
-    Threads.@threads for objID in 1:length(X)
-        res = SimilaritySearch.getknnresult(1, pools)
-        search(index, X[objID], res)
+function associate_centroids_and_compute_error!(X, index::AbstractSearchIndex, codes, distances, counters)
+    pools = getpools(index)
+
+    @batch minbatch=getminbatch(0, length(X)) for objID in 1:length(X)
+        res = getknnresult(1, pools)
+        search(index, X[objID], res; pools)
         codes[objID] = argmin(res)
         distances[objID] = maximum(res)
     end
