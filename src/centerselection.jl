@@ -110,6 +110,6 @@ function center(sel::KnnCentroidSelection, lst::AbstractDatabase)
     k = sel.k == 0 ? ceil(Int32, log2(length(lst))) : sel.k
     k = max(1, k)
     p = search(seq, c, KnnResult(k))
-    s = SubDatabase(lst, p.res.id)
+    s = SubDatabase(lst, [item.id for item in p.res])
     center(sel.sel2, s)
 end

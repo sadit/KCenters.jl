@@ -11,13 +11,11 @@ const X = MatrixDatabase(rand(Float32, 4, 10000))
         p = enet(L2Distance(), X, i^2)
         D = minimum.(p.seq)
         @test maximum(D) <= p.dmax
-        @info minimum.(p.seq)
-        @info p.irefs
-        @info unique(p.irefs)
+        # minimum.(p.seq)
+        #@info p.irefs
+        #@info unique(p.irefs)
     end
 end
-
-exit(0)
 
 @testset "Clustering with dnet" begin
     for i in 2:5
