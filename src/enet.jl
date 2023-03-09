@@ -11,32 +11,30 @@ Selects a number of farthest points in `X`, using a farthest first traversal
 """
 function enet(dist::SemiMetric, X::AbstractDatabase, stop::Function; verbose=true)
     N = length(X)
-    imaxlist = Int32[]
+    irefs = Int32[]
     dmaxlist = Float32[]
-    N == 0 && return
     nndist = Vector{Float32}(undef, N)
     fill!(nndist, typemax(Float32))
     imax::Int = rand(1:N)
     dmax::Float32 = typemax(Float32)
-
-    for i in 1:N
+    N == 0 && return (; irefs, seq=nndist, dmax)
+    
+    @inbounds for i in 1:N
         push!(dmaxlist, dmax)
-        push!(imaxlist, imax)
-        verbose && println(stderr, "computing fartest point $(length(imaxlist)), dmax: $dmax, imax: $imax, n: $(length(X))")
+        push!(irefs, imax)
+        verbose && println(stderr, "computing fartest point $(length(irefs)), dmax: $dmax, imax: $imax, n: $(length(X))")
 
-        @inbounds pivot = X[imax]
+        pivot = X[imax]
         @batch minbatch=getminbatch(0, N) for i in 1:N
-            @inbounds d = evaluate(dist, X[i], pivot)
-            @inbounds nndist[i] = min(nndist[i], d)
+            d = evaluate(dist, X[i], pivot)
+            nndist[i] = min(nndist[i], d)
         end
 
         dmax, imax = findmax(nndist)
-        if stop(dmaxlist, X)
-            break
-        end
+        stop(dmaxlist, X) && break
     end
 
-    (irefs=imaxlist, seq=nndist, dmax=dmax)
+    (; irefs, seq=nndist, dmax)
 end
 
 """

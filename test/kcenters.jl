@@ -1,7 +1,6 @@
 # This file is a part of KCenters.jl
-# License is Apache 2.0: https://www.apache.org/licenses/LICENSE-2.0.txt
 
-using Test
+using Test, JET
 using Random, SimilaritySearch, KCenters, StatsBase
 
 const X = MatrixDatabase(rand(Float32, 4, 10000))
@@ -9,6 +8,7 @@ const X = MatrixDatabase(rand(Float32, 4, 10000))
 @testset "Clustering with enet" begin
     for i in 2:5
         p = enet(L2Distance(), X, i^2)
+        i == 5 && (@test_call enet(L2Distance(), X, i^2))
         D = minimum.(p.seq)
         @test maximum(D) <= p.dmax
         # minimum.(p.seq)
@@ -20,6 +20,7 @@ end
 @testset "Clustering with dnet" begin
     for i in 2:5
         res = dnet(L2Distance(), X, i^2)
+        i == 5 && (@test_call dnet(L2Distance(), X, i^2))
         @info mean([minimum(p) for p in res.seq])
     end
 end
@@ -28,6 +29,9 @@ end
     cfft = KCenters.kcenters(L2Distance(), X, 16)
     cdnet = KCenters.kcenters(L2Distance(), X, 16, initial=:dnet)
     crand = KCenters.kcenters(L2Distance(), X, 16, initial=:rand)
+    @test_call KCenters.kcenters(L2Distance(), X, 16)
+    @test_call KCenters.kcenters(L2Distance(), X, 16, initial=:dnet)
+    @test_call KCenters.kcenters(L2Distance(), X, 16, initial=:rand)
     @show mean(cfft.distances)
     @show mean(cdnet.distances)
     @show mean(crand.distances)

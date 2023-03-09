@@ -5,7 +5,7 @@ using Random
 export dnet
 
 """
-    dnet(callback::Function, dist::SemiMetric, X::AbstractDatabase, k::Integer)
+    dnetfun(callback::Function, dist::SemiMetric, X::AbstractDatabase, k::Integer)
 
 A `k`-net is a set of points `M` such that each object in `X` can be:
 - It is in `M`
@@ -17,7 +17,7 @@ The dnet function uses the `callback` function as an output mechanism. This func
 res is a `KnnResult` object (from SimilaritySearch.jl) and dbmap a mapping 
 
 """
-function dnet(callback::Function, dist::SemiMetric, X::AbstractDatabase, k::Integer)
+function dnetfun(callback::Function, dist::SemiMetric, X::AbstractDatabase, k::Integer)
     N = length(X)
     S = SubDatabase(X, shuffle!(collect(1:N)))
     I = ParallelExhaustiveSearch(dist, S)
@@ -46,7 +46,9 @@ function dnet(callback::Function, dist::SemiMetric, X::AbstractDatabase, k::Inte
         sort!(E)
         E = @view S.map[m+1+numzeros:end]
         if length(E) > 0
-            S.map[rlist] .= E
+            for (i, e) in enumerate(E)
+                S.map[rlist[i]] = e
+            end
         end
 
         resize!(S.map, m)
@@ -89,8 +91,8 @@ function dnet(dist::SemiMetric, X::AbstractDatabase, numcenters::Integer; verbos
         verbose && println(stderr, "dnet -- selected-center: $(length(irefs)), id: $c, dmax: $(dmax[end])")
     end
 
-    dnet(callback, dist, X, n ÷ numcenters)
+    dnetfun(callback, dist, X, n ÷ numcenters)
     #@info [length(p) for p in seq]
     #@info sort(irefs), sum([length(p) for p in seq]), length(irefs)
-    (irefs=irefs, seq=seq, dmax=dmax)
+    (; irefs, seq, dmax)
 end
