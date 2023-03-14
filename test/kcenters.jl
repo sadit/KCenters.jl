@@ -1,4 +1,4 @@
-# This file is a part of KCenters.jl
+    # This file is a part of KCenters.jl
 
 using Test, JET
 using Random, SimilaritySearch, KCenters, StatsBase
@@ -26,12 +26,12 @@ end
 end
 
 @testset "Clustering with KCenters" begin
-    cfft = KCenters.kcenters(L2Distance(), X, 16)
-    cdnet = KCenters.kcenters(L2Distance(), X, 16, initial=:dnet)
-    crand = KCenters.kcenters(L2Distance(), X, 16, initial=:rand)
-    @test_call KCenters.kcenters(L2Distance(), X, 16)
-    @test_call KCenters.kcenters(L2Distance(), X, 16, initial=:dnet)
-    @test_call KCenters.kcenters(L2Distance(), X, 16, initial=:rand)
+    cfft = kcenters(L2Distance(), X, 16)
+    cdnet = kcenters(L2Distance(), X, 16, initial=:dnet)
+    crand = kcenters(L2Distance(), X, 16, initial=:rand)
+    @test_call kcenters(L2Distance(), X, 16)
+    @test_call kcenters(L2Distance(), X, 16, initial=:dnet)
+    @test_call kcenters(L2Distance(), X, 16, initial=:rand)
     @show mean(cfft.distances)
     @show mean(cdnet.distances)
     @show mean(crand.distances)
@@ -39,9 +39,9 @@ end
 
 
 @testset "Clustering with KCenters; KnnCentroidSelection" begin
-    c1 = KCenters.kcenters(L2Distance(), X, 16; sel=KnnCentroidSelection())
-    c2 = KCenters.kcenters(L2Distance(), X, 16; sel=KnnCentroidSelection(sel1=MedoidSelection()))
-    c3 = KCenters.kcenters(L2Distance(), X, 16; sel=KnnCentroidSelection(sel1=RandomCenterSelection()))
+    c1 = kcenters(L2Distance(), X, 16; sel=KnnCentroidSelection())
+    c2 = kcenters(L2Distance(), X, 16; sel=KnnCentroidSelection(sel1=MedoidSelection()))
+    c3 = kcenters(L2Distance(), X, 16; sel=KnnCentroidSelection(sel1=RandomCenterSelection()))
     d1 = mean(c1.distances)
     d2 = mean(c2.distances)
     d3 = mean(c3.distances)
@@ -51,9 +51,9 @@ end
 end
 
 @testset "Clustering with KCenters with an approximate index" begin
-    cfft = KCenters.kcenters(L2Distance(), X, 16, recall=0.99)
-    cdnet = KCenters.kcenters(L2Distance(), X, 16, initial=:dnet, recall=0.99)
-    crand = KCenters.kcenters(L2Distance(), X, 16, initial=:rand, recall=0.99)
+    cfft = kcenters(L2Distance(), X, 16, recall=0.99)
+    cdnet = kcenters(L2Distance(), X, 16, initial=:dnet, recall=0.99)
+    crand = kcenters(L2Distance(), X, 16, initial=:rand, recall=0.99)
     d1 = mean(cfft.distances)
     d2 = mean(cdnet.distances)
     d3 = mean(crand.distances)

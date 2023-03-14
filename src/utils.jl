@@ -59,16 +59,3 @@ function sequence(objects::AbstractVector{T}, refs::AbstractSearchIndex) where T
     s
 end
 
-"""
-    knr(objects::AbstractVector{T}, refs::AbstractSearchIndex) where T
-
-Computes an array of k-nearest neighbors for `objects`
-"""
-function knr(objects::AbstractVector{T}, refs::AbstractSearchIndex) where T
-    s = Vector{Vector{Int}}(undef, length(objects))
-    partition(objects, refs) do i, res
-        s[i] = [p.id for p in res]
-    end
-    s
-end
-

@@ -10,10 +10,12 @@ include("enet.jl")
 include("dnet.jl")
 include("utils.jl")
 include("clustering.jl")
+include("proj.jl")
 
 import Distances: evaluate
 
 export transform, softmax!
+
 """
     transform(centers::AbstractVector{T}, dmax::AbstractVector, kernel::Function, q::T) where T
     transform(centers::AbstractVector{T}, dmax::AbstractVector, kernel::Function, queries::AbstractVector{T}, normalize!::Function=identity) where T
@@ -58,6 +60,10 @@ function softmax!(vec::AbstractVector)
     end
 
     vec
+end
+
+function __init__()
+  __init__perms_cache()
 end
 
 end
