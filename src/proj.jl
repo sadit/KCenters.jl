@@ -272,11 +272,18 @@ function encode_object!(M::BinWalk, vout::AbstractVector, obj)
     vout
 end
 
+function encode_object(M::BinWalk, obj)
+    out = Vector{UInt64}(undef, nperms(M))
+    encode_object!(M, out, obj)
+end
+
 function encode_database!(M::BinWalk, out::Matrix, db::AbstractDatabase; minbatch=0)
   minbatch = getminbatch(minbatch, length(db))
     @batch per=thread minbatch=minbatch for i in eachindex(db)
-        encode_object!(M, view(D, :, i), db[i], B[Threads.threadid()])
+        encode_object!(M, view(out, :, i), db[i])
     end
+
+    out
 end
 
 function encode_database(M::BinWalk, db::AbstractDatabase)

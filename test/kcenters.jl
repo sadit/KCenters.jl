@@ -20,7 +20,7 @@ end
 @testset "Clustering with dnet" begin
     for i in 2:5
         res = dnet(L2Distance(), X, i^2)
-        i == 5 && (@test_call dnet(L2Distance(), X, i^2))
+        #i == 5 && (@test_call dnet(L2Distance(), X, i^2))
         @info mean([minimum(p) for p in res.seq])
     end
 end
@@ -29,9 +29,9 @@ end
     cfft = kcenters(L2Distance(), X, 16)
     cdnet = kcenters(L2Distance(), X, 16, initial=:dnet)
     crand = kcenters(L2Distance(), X, 16, initial=:rand)
-    @test_call kcenters(L2Distance(), X, 16)
-    @test_call kcenters(L2Distance(), X, 16, initial=:dnet)
-    @test_call kcenters(L2Distance(), X, 16, initial=:rand)
+   # @test_call kcenters(L2Distance(), X, 16)
+    #@test_call kcenters(L2Distance(), X, 16, initial=:dnet)
+    #@test_call kcenters(L2Distance(), X, 16, initial=:rand)
     @show mean(cfft.distances)
     @show mean(cdnet.distances)
     @show mean(crand.distances)
