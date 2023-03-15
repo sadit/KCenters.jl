@@ -9,6 +9,48 @@ export encode_database, encode_database!, encode_object, encode_object!
 
 abstract type AbstractReferenceMapping end
 
+struct PermsCacheEncoder
+    P::Vector{Int32}
+    invP::Vector{Int32}
+    vec::Vector{Float32}
+    
+    function PermsCacheEncoder(permsize)
+        n = permsize
+        new(zeros(Int32, n), zeros(Int32, n), zeros(Float32, n))
+    end
+end
+
+function invperm!(invP, P)
+    for i in 1:length(P)
+        invP[P[i]] = i
+    end
+ 
+    invP
+end
+
+const PERMS_CACHES = [PermsCacheEncoder(16)]
+const KNR_CACHES = [KnnResult(16)]
+
+function __init__proj_cache()
+  while length(PERMS_CACHES) < Threads.nthreads()
+    push!(PERMS_CACHES, PermsCacheEncoder(16))
+    push!(KNR_CACHES, KnnResult(16))
+  end
+end
+
+function getpermscache(m)
+  c = PERMS_CACHES[Threads.threadid()]
+  resize!(c.P, m)
+  resize!(c.invP, m)
+  resize!(c.vec, m)
+  c
+end
+
+function geteknrcache(k::Integer, pools)
+    reuse!(KNR_CACHES[Threads.threadid()], k)
+end
+
+
 struct Knr{IndexType<:AbstractSearchIndex,IntType<:Integer} <: AbstractReferenceMapping
   itype::Type{IntType}
   refs::IndexType
@@ -61,24 +103,6 @@ function encode_object(knr::Knr, obj, refs::AbstractSearchIndex; k::Integer=knr.
   encode_object!(knr, X, S; minbatch)
 end
 
-struct PermsCacheEncoder
-    P::Vector{Int32}
-    invP::Vector{Int32}
-    vec::Vector{Float32}
-    
-    function PermsCacheEncoder(permsize)
-        n = permsize
-        new(zeros(Int32, n), zeros(Int32, n), zeros(Float32, n))
-    end
-end
-
-function invperm!(invP, P)
-    for i in 1:length(P)
-        invP[P[i]] = i
-    end
- 
-    invP
-end
 
 struct Perms{DistType<:SemiMetric,DbType<:AbstractDatabase} <: AbstractReferenceMapping
     dist::DistType
@@ -136,22 +160,6 @@ end
 function encode_database(M::Perms, S::AbstractDatabase; minbatch=0)
     D = Matrix{Float32}(undef, permsize(M) * nperms(M), length(S))
     encode_database!(M, D, S; minbatch)
-end
-
-const PERMS_CACHES = [PermsCacheEncoder(16)]
-
-function __init__perms_cache()
-  while length(PERMS_CACHES) < Threads.nthreads()
-    push!(PERMS_CACHES, PermsCacheEncoder(16))
-  end
-end
-
-function getpermscache(m)
-  c = PERMS_CACHES[Threads.threadid()]
-  resize!(c.P, m)
-  resize!(c.invP, m)
-  resize!(c.vec, m)
-  c
 end
 
 struct BinPerms{DistType<:SemiMetric,DbType<:AbstractDatabase} <: AbstractReferenceMapping

@@ -63,7 +63,8 @@ function softmax!(vec::AbstractVector)
 end
 
 function __init__()
-  __init__perms_cache()
+  __init__proj_cache()
+
 end
 
 end
