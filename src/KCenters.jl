@@ -10,6 +10,7 @@ include("enet.jl")
 include("dnet.jl")
 include("utils.jl")
 include("clustering.jl")
+include("refs.jl")
 include("proj.jl")
 
 import Distances: evaluate

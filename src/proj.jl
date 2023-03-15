@@ -5,7 +5,7 @@
 using Polyester
 
 export AbstractReferenceMapping, Knr, Perms, BinPerms, BinWalk
-export encode_database, encode_database!, encode_object, encode_object!
+export encode_database, encode_database!, encode_object, encode_object!, encode_object_res!
 
 abstract type AbstractReferenceMapping end
 
@@ -46,7 +46,7 @@ function getpermscache(m)
   c
 end
 
-function geteknrcache(k::Integer, pools)
+function getknrcache(k::Integer, pools=nothing)
     reuse!(KNR_CACHES[Threads.threadid()], k)
 end
 
@@ -83,7 +83,7 @@ end
 
 function encode_object!(knr::Knr, out::AbstractVector, obj)
   k = length(out)
-  res = SimilaritySearch.getknnresult(k)
+  res = getknrcache(k)
   search(knr.refs, obj, res)
   k_ = length(res)
   o = @view out[1:k_]
@@ -98,11 +98,13 @@ function encode_database(knr::Knr, S::AbstractDatabase; k::Integer=knr.k, minbat
   encode_database!(knr, X, S; minbatch)
 end
 
-function encode_object(knr::Knr, obj, refs::AbstractSearchIndex; k::Integer=knr.k, minbatch=0)
+function encode_object(knr::Knr, obj; k::Integer=knr.k)
   X = Vector{knr.itype}(undef, k)
-  encode_object!(knr, X, S; minbatch)
+  encode_object!(knr, X, obj)
 end
 
+encode_object_res!(knr::Knr, res::KnnResult, obj) = search(knr.refs, obj, res).res
+encode_object_res!(knr::Knr, obj; k=knr.k) = search(knr.refs, obj, getknrcache(k)).res
 
 struct Perms{DistType<:SemiMetric,DbType<:AbstractDatabase} <: AbstractReferenceMapping
     dist::DistType

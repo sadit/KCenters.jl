@@ -93,7 +93,6 @@ function kcenters(dist::SemiMetric, X::AbstractDatabase, k::Integer; sel::Abstra
     kcenters_(dist, X, initial, sel=sel, maxiters=maxiters, tol=tol, recall=recall, verbose=verbose)
 end
 
-
 function kcenters_(dist::SemiMetric, X::AbstractDatabase, C::AbstractDatabase; sel::AbstractCenterSelection=CentroidSelection(), maxiters=-1, tol=0.001, recall=1.0, verbose=true)
     # Lloyd's algoritm
     n = length(X)

@@ -13,8 +13,8 @@ using Random, SimilaritySearch, KCenters, StatsBase
     Igold, _ = searchbatch(ExhaustiveSearch(; dist, db), queries, k)
     
     refs = let
-        R = kcenters(dist, db, 64; initial=:rand)
-        refs = MatrixDatabase(R.centers)
+        R = references(dist, db, 64; initial=:rand)
+        refs = MatrixDatabase(R)
         ExhaustiveSearch(; dist, db=refs)
     end
 
