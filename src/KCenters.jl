@@ -2,7 +2,7 @@
 
 module KCenters
 using SimilaritySearch, Polyester
-using SimilaritySearch: getminbatch, getknnresult, getpools
+using SimilaritySearch: getminbatch, getknnresult, getcontext
 
 include("criterions.jl")
 include("centerselection.jl")

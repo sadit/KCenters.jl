@@ -153,11 +153,11 @@ function kcenters_(dist::SemiMetric, X::AbstractDatabase, C::AbstractDatabase; s
 end
 
 function associate_centroids_and_compute_error!(X, index::AbstractSearchIndex, codes, distances, counters)
-    pools = getpools(index)
+    ctx = getcontext(index)
 
     @batch minbatch=getminbatch(0, length(X)) for objID in 1:length(X)
-        res = getknnresult(1, pools)
-        search(index, X[objID], res; pools)
+        res = getknnresult(1, ctx)
+        search(index, ctx, X[objID], res)
         codes[objID] = argmin(res)
         distances[objID] = maximum(res)
     end
