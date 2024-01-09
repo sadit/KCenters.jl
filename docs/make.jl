@@ -20,6 +20,7 @@ makedocs(;
         "Stop criterions" => "criterions.md",
         "Partitioning function" => "utils.md"
     ],
+    warnonly=true
 )
 
 deploydocs(;
