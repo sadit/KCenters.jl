@@ -23,9 +23,10 @@ function dnetfun(callback::Function, dist::SemiMetric, X::AbstractDatabase, k::I
     I = ParallelExhaustiveSearch(dist, S)
     res = KnnResult(k)
     rlist = Int32[]
+    ctx = GenericContext()
     while length(I) > 0
         n = length(I)
-        p = search(I, I[n], reuse!(res, k))
+        p = search(I, ctx, I[n], reuse!(res, k))
         callback(S.map[n], p.res, S.map)
         m = n - length(p.res)
         empty!(rlist)

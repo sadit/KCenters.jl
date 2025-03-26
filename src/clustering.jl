@@ -104,10 +104,12 @@ function kcenters_(dist::SemiMetric, X::AbstractDatabase, C::AbstractDatabase; s
 
     function create_index(CC)
         if recall >= 1.0
-            ExhaustiveSearch(dist, CC)
+            ExhaustiveSearch(dist, CC), GenericContext()
         else
             idx = SearchGraph(; db=CC, dist)
-            index!(idx)
+            ctx = SearchGraphContext()
+            index!(idx, ctx)
+            idx, ctx
         end
     end
 
@@ -152,8 +154,8 @@ function kcenters_(dist::SemiMetric, X::AbstractDatabase, C::AbstractDatabase; s
     ClusteringData(CC, freqs, compute_dmax(numcenters, codes, distances), codes, distances, err)
 end
 
-function associate_centroids_and_compute_error!(X, index::AbstractSearchIndex, codes, distances, counters)
-    ctx = getcontext(index)
+function associate_centroids_and_compute_error!(X, index_ctx, codes, distances, counters)
+    index, ctx = index_ctx
 
     @batch minbatch=getminbatch(0, length(X)) for objID in 1:length(X)
         res = getknnresult(1, ctx)

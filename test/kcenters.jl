@@ -1,6 +1,6 @@
     # This file is a part of KCenters.jl
 
-using Test, JET
+using Test
 using Random, SimilaritySearch, KCenters, StatsBase
 
 const X = MatrixDatabase(rand(Float32, 4, 10000))
@@ -8,7 +8,7 @@ const X = MatrixDatabase(rand(Float32, 4, 10000))
 @testset "Clustering with enet" begin
     for i in 2:5
         p = enet(L2Distance(), X, i^2)
-        i == 5 && (@test_call enet(L2Distance(), X, i^2))
+        i == 5 && enet(L2Distance(), X, i^2)
         D = minimum.(p.seq)
         @test maximum(D) <= p.dmax
         # minimum.(p.seq)

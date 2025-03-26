@@ -61,10 +61,11 @@ struct KnnCentroidSelection{S1_<:AbstractCenterSelection, S2_<:AbstractCenterSel
     sel2::S2_
     dist::M_
     k::Int32
+    ctx::GenericContext
 end
 
 MedoidSelection(; dist=SqL2Distance(), ratio=0.5) = MedoidSelection(dist, convert(Float32, ratio))
-KnnCentroidSelection(; sel1=CentroidSelection(), sel2=CentroidSelection(), dist=SqL2Distance(), k=0) = KnnCentroidSelection(sel1, sel2, dist, convert(Int32, k))
+KnnCentroidSelection(; sel1=CentroidSelection(), sel2=CentroidSelection(), dist=SqL2Distance(), k=0, ctx=GenericContext()) = KnnCentroidSelection(sel1, sel2, dist, convert(Int32, k), ctx)
 
 function center(::CentroidSelection, lst::AbstractDatabase)
     v = Vector(lst[1])
@@ -109,7 +110,7 @@ function center(sel::KnnCentroidSelection, lst::AbstractDatabase)
     seq = ExhaustiveSearch(sel.dist, convert(AbstractVector, lst))
     k = sel.k == 0 ? ceil(Int32, log2(length(lst))) : sel.k
     k = max(1, k)
-    p = search(seq, c, KnnResult(k))
+    p = search(seq, sel.ctx, c, KnnResult(k))
     s = SubDatabase(lst, [item.id for item in p.res])
     center(sel.sel2, s)
 end

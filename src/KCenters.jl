@@ -11,7 +11,6 @@ include("dnet.jl")
 include("utils.jl")
 include("clustering.jl")
 include("refs.jl")
-include("proj.jl")
 
 import Distances: evaluate
 
@@ -61,11 +60,6 @@ function softmax!(vec::AbstractVector)
     end
 
     vec
-end
-
-function __init__()
-  __init__proj_cache()
-
 end
 
 end
